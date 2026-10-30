@@ -622,6 +622,24 @@ describe("DesktopWindow", () => {
       }),
   );
 
+  it.effect("lets the click that activates the macOS window also reach the page", () =>
+    Effect.gen(function* () {
+      const createdWindowOptions: Electron.BrowserWindowConstructorOptions[] = [];
+      const layer = layerTest({
+        window: makeFakeBrowserWindow().window,
+        createCount: yield* Ref.make(0),
+        mainWindow: yield* Ref.make<Option.Option<Electron.BrowserWindow>>(Option.none()),
+        createdWindowOptions,
+      });
+      yield* Effect.gen(function* () {
+        const desktopWindow = yield* DesktopWindow.DesktopWindow;
+        yield* desktopWindow.handleBackendReady(new URL("http://127.0.0.1:3773"));
+      }).pipe(Effect.provide(layer));
+
+      assert.equal(createdWindowOptions[0]?.acceptFirstMouse, true);
+    }),
+  );
+
   it.effect("blocks only repeated Cmd+W input before it reaches the native window menu", () =>
     Effect.gen(function* () {
       const fakeWindow = makeFakeBrowserWindow();
