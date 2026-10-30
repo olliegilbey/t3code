@@ -787,7 +787,11 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
         </InlineButton>
       ) : null}
       <Tooltip>
-        <TooltipTrigger render={<p className="text-muted-foreground text-xs tabular-nums" />}>
+        <TooltipTrigger
+          render={
+            <p data-timeline-timestamp className="text-muted-foreground text-xs tabular-nums" />
+          }
+        >
           {formatDayAwareTimestamp(row.message.createdAt, ctx.timestampFormat)}
         </TooltipTrigger>
         <TooltipPopup>
@@ -854,6 +858,7 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
         </div>
       ) : null}
       <div
+        data-user-message-bubble
         className={cn(
           "relative min-w-0 max-w-[80%] rounded-2xl text-message-foreground",
           (mediaAboveText || row.groupedWithPrevious) && "rounded-tr-md",

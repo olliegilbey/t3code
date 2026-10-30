@@ -193,6 +193,9 @@ import { MarkdownCodeBlock, SuspenseShikiCodeBlock } from "./chat/MarkdownCodeBl
 import { createMarkdownRenderer } from "./chat/markdownRenderer";
 import { splitMarkdownBlocks } from "./chat/markdownStreamBlocks";
 import { MarkdownMermaidCodeBlock } from "./chat/MarkdownMermaidCodeBlock";
+import { CopyableBlockquote } from "./chat/CopyableBlockquote";
+import { guessCodeFenceLanguage } from "./chat/ShellCommandText.logic";
+import { useTerminalMode } from "../terminalMode";
 import { MarkdownTable } from "./chat/MarkdownTable";
 import { MarkdownDetails } from "./chat/MarkdownDetails";
 import {
@@ -954,6 +957,12 @@ function selectInlineCode(event: ReactMouseEvent<HTMLElement>) {
   window.getSelection()?.selectAllChildren(event.currentTarget);
 }
 
+// Terminal mode colors an unlabeled block when its first line makes the language obvious.
+function guessedFenceClassName(code: string, terminalMode: boolean): string | undefined {
+  const language = terminalMode ? guessCodeFenceLanguage(code) : null;
+  return language ? `language-${language}` : undefined;
+}
+
 const CHAT_MARKDOWN_COMPONENTS = {
   h1: markdownHeadingRenderer(1),
   h2: markdownHeadingRenderer(2),
@@ -979,7 +988,7 @@ const CHAT_MARKDOWN_COMPONENTS = {
     const alert =
       GITHUB_ALERT_PRESENTATIONS[String((props as Record<string, unknown>)["data-alert"] ?? "")];
     if (!alert) {
-      return <blockquote {...props}>{children}</blockquote>;
+      return <CopyableBlockquote {...props}>{children}</CopyableBlockquote>;
     }
     return (
       <div
@@ -1564,6 +1573,7 @@ const CHAT_MARKDOWN_COMPONENTS = {
       mathEnabled,
     } = use(ChatMarkdownRendererContext);
     const text = use(ChatMarkdownTextContext);
+    const terminalMode = useTerminalMode();
     const codeBlock = extractCodeBlock(children);
     if (!codeBlock) {
       return <pre {...props}>{children}</pre>;
@@ -1593,7 +1603,7 @@ const CHAT_MARKDOWN_COMPONENTS = {
           }
         >
           <SuspenseShikiCodeBlock
-            className={codeBlock.className}
+            className={codeBlock.className ?? guessedFenceClassName(codeBlock.code, terminalMode)}
             code={codeBlock.code}
             themeName={diffThemeName}
             isStreaming={isStreaming}
