@@ -2778,9 +2778,14 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
   wslRuntimeBundled = false,
   arch?: typeof BuildArch.Type,
 ) {
+  // A fork's build takes its own ID, so macOS keeps its permissions apart from this app's.
+  const appId = yield* Config.String("T3CODE_DESKTOP_APP_ID").pipe(
+    Config.option,
+    Config.map(Option.getOrElse(() => DESKTOP_APP_ID)),
+  );
   const buildConfig: Record<string, unknown> = {
     afterPack: (yield* Path.Path).join(yield* RepoRoot, "scripts/prepare-server-compile-cache.cjs"),
-    appId: DESKTOP_APP_ID,
+    appId,
     productName: resolveDesktopProductName(version),
     artifactName: "T3-Code-${version}-${arch}.${ext}",
     electronLanguages: [...DESKTOP_ELECTRON_LANGUAGES],
