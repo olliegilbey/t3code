@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
+import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as PlatformError from "effect/PlatformError";
 import * as Schema from "effect/Schema";
@@ -36,9 +37,14 @@ export const resolveUserDataPath = Effect.fn("desktop.userData.resolveUserDataPa
     readonly appDataDirectory: string;
     readonly isDevelopment: boolean;
     readonly platform: NodeJS.Platform;
+    readonly userDataProfile?: Option.Option<string>;
   }) {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
+    // Electron runs one instance per profile, so a build with its own runs beside this one.
+    if (input.userDataProfile !== undefined && Option.isSome(input.userDataProfile)) {
+      return path.join(input.appDataDirectory, input.userDataProfile.value);
+    }
     const names = input.isDevelopment
       ? { current: "t3code-dev", legacy: "T3 Code (Dev)" }
       : { current: "t3code-v2", legacy: "T3 Code (Alpha)" };
