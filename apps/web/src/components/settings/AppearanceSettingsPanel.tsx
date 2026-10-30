@@ -21,6 +21,12 @@ import {
 import { useCustomThemes } from "../../hooks/useCustomThemes";
 import { useEnvironmentIdentificationMode } from "../../hooks/useSettings";
 import { useTheme } from "../../hooks/useTheme";
+import {
+  setTerminalModeEnabled,
+  setVimKeysEnabled,
+  useTerminalMode,
+  useVimKeysSetting,
+} from "../../terminalMode";
 import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
@@ -348,6 +354,8 @@ export function AppearanceSettingsPanel() {
             />
           }
         />
+        <TerminalModeRow />
+        <VimKeysRow />
         <AdvancedSettings
           targetIds={[
             searchableSetting("panel-animations").id,
@@ -482,5 +490,51 @@ export function AppearanceSettingsPanel() {
 
       <TypographySection />
     </SettingsPageContainer>
+  );
+}
+
+function TerminalModeRow() {
+  const terminalMode = useTerminalMode();
+  return (
+    <SettingsRow
+      {...searchableSetting("terminal-mode")}
+      description="Monospace chat, prompt-style messages, your theme's terminal and syntax colors, indented work logs, and the diff panel open on new threads. Messages use the prompt font size, tool lines the code size."
+      resetAction={
+        terminalMode ? (
+          <SettingResetButton label="terminal mode" onClick={() => setTerminalModeEnabled(false)} />
+        ) : null
+      }
+      control={
+        <Switch
+          checked={terminalMode}
+          onCheckedChange={(checked) => setTerminalModeEnabled(Boolean(checked))}
+          aria-label="Terminal mode"
+        />
+      }
+    />
+  );
+}
+
+function VimKeysRow() {
+  const terminalMode = useTerminalMode();
+  const vimKeys = useVimKeysSetting();
+  if (!terminalMode) return null;
+  return (
+    <SettingsRow
+      {...searchableSetting("vim-keys")}
+      description="Edit messages with vim's insert and normal modes. Esc enters normal mode, which has hjkl, w b e, 0 ^ $, gg G, i a o, x, dd, cw, D, C and u. Enter still sends."
+      resetAction={
+        vimKeys ? (
+          <SettingResetButton label="vim keys" onClick={() => setVimKeysEnabled(false)} />
+        ) : null
+      }
+      control={
+        <Switch
+          checked={vimKeys}
+          onCheckedChange={(checked) => setVimKeysEnabled(Boolean(checked))}
+          aria-label="Vim keys"
+        />
+      }
+    />
   );
 }

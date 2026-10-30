@@ -4,6 +4,7 @@ import {
   type ScopedThreadRef,
   type ThreadId,
 } from "@t3tools/contracts";
+import { resolveProjectColor } from "../../projectIdentity";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
 import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
 import {
@@ -301,6 +302,9 @@ export const ChatHeader = memo(function ChatHeader({
                     <button
                       type="button"
                       aria-label={`New thread in ${activeProjectName}`}
+                      data-project-color={
+                        activeProject.isScratch ? undefined : resolveProjectColor(activeProject)
+                      }
                       onClick={onNewThreadInProject}
                       className="inline-flex min-w-0 max-w-full cursor-pointer items-center gap-1.5 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                     />
