@@ -167,6 +167,7 @@ function AssistantMessageMeta({
 
   return (
     <div
+      data-assistant-meta
       className={cn(
         "flex items-center gap-2 text-xs tabular-nums transition-opacity duration-200",
         alwaysVisible
@@ -190,7 +191,11 @@ function AssistantMessageMeta({
       ) : null}
       {!message.streaming && (
         <Tooltip>
-          <TooltipTrigger render={<p className="text-muted-foreground text-xs tabular-nums" />}>
+          <TooltipTrigger
+            render={
+              <p data-timeline-timestamp className="text-muted-foreground text-xs tabular-nums" />
+            }
+          >
             {formatDayAwareTimestamp(message.updatedAt, ctx.timestampFormat)}
           </TooltipTrigger>
           <TooltipPopup>

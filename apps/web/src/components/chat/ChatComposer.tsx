@@ -242,6 +242,7 @@ import type { UnifiedSettings } from "@t3tools/contracts/settings";
 import { isVideoAttachment, type SessionPhase, type Thread, type ThreadShell } from "../../types";
 import { type ComposerPromptHistoryPosition } from "./composerPromptHistory";
 import type { PendingUserInputDraftAnswer } from "@t3tools/client-runtime/state/pending-user-input";
+import type { ApprovalResponder } from "@t3tools/client-runtime/state/thread-requests";
 import type {
   LatestProposedPlanState,
   PendingApproval,
@@ -278,6 +279,8 @@ import {
 } from "./preparingComposerImages";
 import { ComposerControlsBar } from "./ComposerControlsBar";
 import { composerCommandKeyHandler } from "./composerCommandKey";
+import { TerminalApprovalPrompt } from "./TerminalApprovalPrompt";
+import { useTerminalApprovalPrompt } from "./useTerminalApprovalPrompt";
 
 function consumePasteAsTextShortcut(deadline: { current: number }): boolean {
   const armed = Date.now() <= deadline.current;
@@ -390,6 +393,7 @@ export interface ChatComposerProps {
 
   activePendingApproval: PendingApproval | null;
   pendingApprovals: PendingApproval[];
+  onRespondToApproval: ApprovalResponder;
   onHeldRequestIdsChange: (requestIds: ReadonlySet<string>) => void;
   pendingUserInputs: PendingUserInput[];
   activePendingProgress: {
@@ -533,6 +537,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     environmentUnavailable,
     activePendingApproval: incomingPendingApproval,
     pendingApprovals,
+    onRespondToApproval,
     onHeldRequestIdsChange,
     pendingUserInputs: incomingPendingUserInputs,
     activePendingProgress: incomingPendingProgress,
@@ -2125,8 +2130,32 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     }
   };
   const submitComposerStable = useStableCallback(submitComposer);
+  const sendApprovalNoteStable = useStableCallback(() =>
+    submitComposer(
+      undefined,
+      resolveComposerDispatchMode({
+        running: phase === "running",
+        alternateModifier: false,
+        activeTurnDefault: "steer",
+        canSteer: !isCompacting,
+      }),
+    ),
+  );
+  const terminalApproval = useTerminalApprovalPrompt({
+    approval: pendingUserInputs.length === 0 ? activePendingApproval : null,
+    pendingApprovals,
+    respondingRequestIds,
+    canOperate: canOperateThread,
+    prompt,
+    promptRef,
+    composerDraftTarget,
+    editorRef: composerEditorRef,
+    onRespondToApproval,
+    sendNote: sendApprovalNoteStable,
+  });
   const handleSubmitMessage = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
+    if (terminalApproval.onSubmit()) return;
     submitComposer(
       event,
       resolveComposerDispatchMode({
@@ -2199,6 +2228,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   const expandMobileComposerStable = useStableCallback(expandMobileComposer);
 
   const onComposerCommandKey = (key: string, event: KeyboardEvent, isTaskItem?: boolean) =>
+    terminalApproval.onKey(key, event) ||
     composerCommandKeyHandler({
       keybindings,
       sendShortcut: settings.sendShortcut,
@@ -2234,7 +2264,11 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       resolveActiveComposerTrigger,
       readComposerSnapshot,
       applyPromptReplacement,
-      submitComposer,
+      // A send while a request is shown answers it, with the text as the reason.
+      submitComposer: (submitEvent, dispatchMode, submissionIntent) => {
+        if (!terminalApproval.onSubmit())
+          submitComposer(submitEvent, dispatchMode, submissionIntent);
+      },
     })(key, event, isTaskItem);
 
   const {
@@ -3190,9 +3224,14 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       <ComposerBanner.Dock>
         <ComposerBanner.Column>
           <ComposerBannerStack items={shelfItems} />
-          {showComposerTopDrawer ? (
+          {showComposerTopDrawer || terminalApproval.view ? (
             <ComposerBanner.Attachment>
-              <ComposerBanner.Root data-chat-composer-top-drawer="true" variant="info">
+              <ComposerBanner.Root
+                data-chat-composer-top-drawer="true"
+                variant={
+                  pendingUserInputs.length === 0 && terminalApproval.view ? "warning" : "info"
+                }
+              >
                 {pendingUserInputs.length > 0 ? (
                   <ComposerPendingUserInputPanel
                     pendingUserInputs={pendingUserInputs}
@@ -3209,6 +3248,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                     onToggleOption={onSelectActivePendingUserInputOption}
                     onAdvance={onAdvanceActivePendingUserInput}
                     onDismiss={onDismissActivePendingUserInput}
+                  />
+                ) : terminalApproval.view ? (
+                  <TerminalApprovalPrompt
+                    {...terminalApproval.view}
+                    disabled={terminalApproval.disabled}
+                    onRun={terminalApproval.onRun}
                   />
                 ) : !isComposerCollapsedMobile && showPlanFollowUpPrompt && activeProposedPlan ? (
                   <ComposerPlanFollowUpBanner
@@ -3412,7 +3457,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                     onCitationDraftSave={saveCitationDraftToPromptStable}
                     onPaste={onComposerPasteStable}
                     placeholder={
-                      isComposerApprovalState
+                      terminalApproval.placeholder ??
+                      (isComposerApprovalState
                         ? activePendingApproval?.supportsFeedback
                           ? "Send feedback to decline this request"
                           : "Send a message to decline and redirect the agent"
@@ -3426,7 +3472,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                               ? "Choose a project above to start a thread"
                               : showProviderUnavailable
                                 ? "Enable a provider in Settings to send a message"
-                                : DEFAULT_COMPOSER_PLACEHOLDER
+                                : DEFAULT_COMPOSER_PLACEHOLDER)
                     }
                     disabled={
                       projectSelectionRequired ||

@@ -2690,6 +2690,25 @@ describe("v2 run and attempt history", () => {
       expect.objectContaining({ id: "work-1" }),
       expect.objectContaining({ id: "provider-recovered" }),
     ]);
+
+    // With disclosures open by default, the same ids toggle them closed instead.
+    const openByDefault = deriveMessagesTimelineRows({
+      timelineEntries,
+      disclosuresOpenByDefault: true,
+      isWorking: false,
+      turnDiffSummaries: [],
+      supportsConversationRollback: false,
+    });
+    expect(openByDefault).toEqual(openedActivity);
+    const closedByToggle = deriveMessagesTimelineRows({
+      timelineEntries,
+      expandedRunIds: new Set(["turn-1" as never]),
+      disclosuresOpenByDefault: true,
+      isWorking: false,
+      turnDiffSummaries: [],
+      supportsConversationRollback: false,
+    });
+    expect(closedByToggle).toEqual(collapsedRows);
   });
   it("collapses only output from a superseded V2 attempt within the active logical run", () => {
     const runId = "run-steered" as never;
