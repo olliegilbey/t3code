@@ -87,6 +87,8 @@ const ProjectLucideIcon = Schema.Struct({
 const ProjectEmojiIcon = Schema.Struct({
   kind: Schema.Literal("emoji"),
   emoji: ProjectEmoji,
+  // An emoji can't be tinted, but the color still marks the project, as Terminal mode's sidebar does.
+  color: Schema.optional(ProjectIconColor),
 });
 const ProjectMonogramIcon = Schema.Struct({
   kind: Schema.Literal("monogram"),
