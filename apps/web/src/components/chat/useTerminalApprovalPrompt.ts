@@ -36,6 +36,7 @@ interface TerminalApprovalView {
   readonly position: { index: number; total: number };
   readonly flashIndex: number | null;
   readonly result: ProviderApprovalDecision | null;
+  readonly hint: string;
 }
 
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
@@ -73,56 +74,64 @@ export function useTerminalApprovalPrompt(input: {
     requestId: RuntimeRequestId;
     state: TerminalApprovalState;
     empty: boolean;
+    /** Text there before the prompt armed: a message being written, not a reason. */
+    carried: boolean;
   } | null>(null);
   const [feedback, setFeedback] = useState<TerminalApprovalView | null>(null);
   const [notes, setNotes] = useState<ReadonlyArray<{ target: DraftTarget; text: string }>>([]);
-  const [armedFor, setArmedFor] = useState<RuntimeRequestId | null>(null);
+  const [armedFor, setArmedFor] = useState<string | null>(null);
+  const [holds, setHolds] = useState(0);
 
   const shown = terminalMode ? approval : null;
   const options = orderApprovalOptions(shown?.options);
   const empty = input.prompt.trim() === "";
   const own = shown && stored?.requestId === shown.requestId ? stored : null;
-  const fresh = () =>
-    reduceTerminalApproval(
-      initialTerminalApprovalState(options),
-      { type: "draft", empty },
-      options,
-    );
-  // Typing binds a reason to Decline, and emptying the composer drops it.
+  // Holding a message restarts the beat, so a second Enter can't answer.
+  const armKey = shown ? `${shown.requestId}:${holds}` : null;
+  const armed = armKey !== null && armedFor === armKey;
+  // Typing binds a reason to Decline, and emptying the composer drops it. Text written before
+  // the prompt armed is a message the reader was already sending, so it binds nothing.
   if (shown && own?.empty !== empty) {
+    const carried = !empty && (own ? own.carried || !armed : true);
     setStored({
       requestId: shown.requestId,
-      state: own ? reduceTerminalApproval(own.state, { type: "draft", empty }, options) : fresh(),
+      state:
+        own && !carried
+          ? reduceTerminalApproval(own.state, { type: "draft", empty }, options)
+          : (own?.state ?? initialTerminalApprovalState(options)),
       empty,
+      carried,
     });
   }
-  const state = own?.state ?? fresh();
+  const state = own?.state ?? initialTerminalApprovalState(options);
+  const carried = own?.carried ?? !empty;
   const shownId = shown?.requestId ?? null;
+  const hereKey = composerTargetKey(composerDraftTarget);
+  const messageWaits = notes.some((note) => composerTargetKey(note.target) === hereKey);
+  const hint =
+    carried && !empty
+      ? "Enter sends your message after you answer · Clear it to answer here"
+      : `${messageWaits ? "Your message sends after you answer · " : ""}Enter to run · ↑↓ or j/k to choose · Tab to add a reason`;
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- a request takes answer keys only after a beat, so an Enter meant for a message just sent can't answer it
   useEffect(() => {
-    if (shownId === null) return;
-    const timer = window.setTimeout(() => setArmedFor(shownId), ARM_MS);
+    if (armKey === null) return;
+    const timer = window.setTimeout(() => setArmedFor(armKey), ARM_MS);
     return () => window.clearTimeout(timer);
-  }, [shownId]);
-  const answerableId =
-    shown?.responseCapability === "live" && input.canOperate && !background ? shownId : null;
+  }, [armKey]);
+  const answerable = shown?.responseCapability === "live" && input.canOperate;
+  const answerableId = answerable && !background ? shownId : null;
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- a request takes the keyboard as it shows, so Enter answers it without a click first
   useEffect(() => {
     if (answerableId !== null && composerMayTakeFocus(document.activeElement)) {
       editorRef.current?.focus();
     }
   }, [answerableId, editorRef]);
-  const active =
-    shown !== null &&
-    armedFor === shown.requestId &&
-    shown.responseCapability === "live" &&
-    input.canOperate &&
-    feedback === null;
+  const active = armed && answerable && feedback === null;
 
   const update = (event: TerminalApprovalEvent) => {
     if (!shown) return;
     const next = reduceTerminalApproval(state, event, options);
-    if (next !== state) setStored({ requestId: shown.requestId, state: next, empty });
+    if (next !== state) setStored({ requestId: shown.requestId, state: next, empty, carried });
   };
 
   const run = (index: number | null) => {
@@ -130,7 +139,7 @@ export function useTerminalApprovalPrompt(input: {
     const text = promptRef.current;
     const picked = index === null ? undefined : options[index];
     const { decision, reason } = picked
-      ? { decision: picked.decision, reason: text.trim() || null }
+      ? { decision: picked.decision, reason: carried ? null : text.trim() || null }
       : resolveTerminalApprovalSubmit(state, options, text);
     const plan = planApprovalResponse(decision, reason, shown.supportsFeedback === true);
     const followUp = plan.followUp;
@@ -142,6 +151,7 @@ export function useTerminalApprovalPrompt(input: {
       position: { index: 0, total: pendingApprovals.length },
       flashIndex: picked ? index : options.findIndex((option) => option.decision === decision),
       result: null,
+      hint,
     };
     setFeedback(view);
     void Promise.all([
@@ -163,13 +173,23 @@ export function useTerminalApprovalPrompt(input: {
     });
   };
 
+  // The message waits with the reasons until no request is open, then sends.
+  const hold = () => {
+    const text = promptRef.current;
+    if (text.trim()) {
+      setNotes((current) => [...current, { target: composerDraftTarget, text }]);
+      promptRef.current = "";
+      useComposerDraftStore.getState().setPrompt(composerDraftTarget, "");
+    }
+    setHolds((count) => count + 1);
+  };
+
   const blocked = pendingApprovals.some((pending) => pending.responseCapability === "live");
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- an open request blocks the agent from taking a message, so reasons wait until none is open
   useEffect(() => {
     if (notes.length === 0 || blocked) return;
     // oxlint-disable-next-line react/set-state-in-effect -- the reasons send once; clearing them here is what stops a second send.
     setNotes([]);
-    const hereKey = composerTargetKey(composerDraftTarget);
     for (const note of notes) {
       if (composerTargetKey(note.target) !== hereKey) putNoteInDraft(note.target, note.text);
     }
@@ -186,7 +206,7 @@ export function useTerminalApprovalPrompt(input: {
     promptRef.current = text;
     store.setPrompt(composerDraftTarget, text);
     sendNote();
-  }, [notes, blocked, composerDraftTarget, promptRef, sendNote]);
+  }, [notes, blocked, composerDraftTarget, hereKey, promptRef, sendNote]);
   const notesRef = useRef(notes);
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- the unmount below reads the reasons still waiting
   useEffect(() => {
@@ -235,6 +255,7 @@ export function useTerminalApprovalPrompt(input: {
             position: { index: 0, total: pendingApprovals.length },
             flashIndex: null,
             result: null,
+            hint,
           }
         : null),
     disabled:
@@ -251,6 +272,10 @@ export function useTerminalApprovalPrompt(input: {
     onSubmit: (): boolean => {
       // Holds a send while the answer lands, and while the next request waits behind its result.
       if (feedback !== null && (feedback.result === null || shown !== null)) return true;
+      if (answerable && (carried || !armed)) {
+        hold();
+        return true;
+      }
       if (!active) return false;
       run(null);
       return true;
