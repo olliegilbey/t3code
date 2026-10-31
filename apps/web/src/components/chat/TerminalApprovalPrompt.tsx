@@ -33,6 +33,7 @@ export const TerminalApprovalPrompt = memo(function TerminalApprovalPrompt({
   result,
   disabled,
   onRun,
+  onFocusComposer,
 }: {
   approval: PendingApproval;
   position: { index: number; total: number };
@@ -42,6 +43,7 @@ export const TerminalApprovalPrompt = memo(function TerminalApprovalPrompt({
   result: ProviderApprovalDecision | null;
   disabled: boolean;
   onRun: (index: number) => void;
+  onFocusComposer: () => void;
 }) {
   const canRespond = approval.responseCapability === "live";
   const shownResult = result ? resultLine(result) : null;
@@ -49,6 +51,17 @@ export const TerminalApprovalPrompt = memo(function TerminalApprovalPrompt({
     <div
       data-terminal-approval-prompt
       className="flex flex-col gap-1.5 px-3 pt-2 pb-1.5 font-mono text-xs/5"
+      onClick={(event) => {
+        // Selecting the command to copy it keeps the selection.
+        if (window.getSelection()?.isCollapsed === false) return;
+        if (
+          event.target instanceof Element &&
+          event.target.closest("button:not([data-terminal-approval-option])")
+        ) {
+          return;
+        }
+        onFocusComposer();
+      }}
     >
       <div className="flex items-baseline gap-2">
         <span data-terminal-approval-title className="font-bold">

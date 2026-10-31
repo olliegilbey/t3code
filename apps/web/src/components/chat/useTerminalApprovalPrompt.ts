@@ -4,12 +4,14 @@ import type {
   ProviderApprovalOption,
   RuntimeRequestId,
 } from "@t3tools/contracts";
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { type RefObject, use, useEffect, useRef, useState } from "react";
 import { useStableCallback } from "~/hooks/useStableCallback";
 import { composerTargetKey, useComposerDraftStore } from "../../composerDraftStore";
 import type { PendingApproval } from "../../session-logic";
 import { useTerminalMode } from "../../terminalMode";
+import { composerMayTakeFocus } from "../ChatView.logic";
 import type { ComposerPromptEditorHandle } from "../ComposerPromptEditorTiptap";
+import { BackgroundThreadContext } from "./backgroundThread";
 import type { ChatComposerProps } from "./ChatComposer";
 import {
   initialTerminalApprovalState,
@@ -57,12 +59,16 @@ export function useTerminalApprovalPrompt(input: {
   readonly prompt: string;
   readonly promptRef: RefObject<string>;
   readonly composerDraftTarget: DraftTarget;
-  readonly editorRef: RefObject<ComposerPromptEditorHandle | null>;
+  readonly editorRef: RefObject<Pick<
+    ComposerPromptEditorHandle,
+    "focus" | "setVimMode" | "setVimNormalKeyInterceptor"
+  > | null>;
   readonly onRespondToApproval: ApprovalResponder;
   readonly sendNote: () => void;
 }) {
   const { approval, pendingApprovals, promptRef, composerDraftTarget, editorRef, sendNote } = input;
   const terminalMode = useTerminalMode();
+  const background = use(BackgroundThreadContext);
   const [stored, setStored] = useState<{
     requestId: RuntimeRequestId;
     state: TerminalApprovalState;
@@ -98,6 +104,14 @@ export function useTerminalApprovalPrompt(input: {
     const timer = window.setTimeout(() => setArmedFor(shownId), ARM_MS);
     return () => window.clearTimeout(timer);
   }, [shownId]);
+  const answerableId =
+    shown?.responseCapability === "live" && input.canOperate && !background ? shownId : null;
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- a request takes the keyboard as it shows, so Enter answers it without a click first
+  useEffect(() => {
+    if (answerableId !== null && composerMayTakeFocus(document.activeElement)) {
+      editorRef.current?.focus();
+    }
+  }, [answerableId, editorRef]);
   const active =
     shown !== null &&
     armedFor === shown.requestId &&
@@ -232,6 +246,7 @@ export function useTerminalApprovalPrompt(input: {
       update({ type: "pick", index });
       run(index);
     },
+    focusComposer: () => editorRef.current?.focus(),
     /** Takes a send while a request is shown, so text is its reason. */
     onSubmit: (): boolean => {
       // Holds a send while the answer lands, and while the next request waits behind its result.
