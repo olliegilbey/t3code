@@ -12,6 +12,7 @@ import { act, fakeTimers, render } from "../../../test/render";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import type { PendingApproval } from "../../session-logic";
 import { setTerminalModeEnabled } from "../../terminalMode";
+import { BackgroundThreadContext } from "./backgroundThread";
 import { useTerminalApprovalPrompt } from "./useTerminalApprovalPrompt";
 
 type Hook = ReturnType<typeof useTerminalApprovalPrompt>;
@@ -37,6 +38,7 @@ function Harness(props: {
   readonly promptRef: { current: string };
   readonly respond: ApprovalResponder;
   readonly sendNote: () => void;
+  readonly focusEditor: () => void;
 }) {
   const prompt = useComposerDraftStore((store) => store.getComposerDraft(TARGET)?.prompt ?? "");
   const result = useTerminalApprovalPrompt({
@@ -47,7 +49,13 @@ function Harness(props: {
     prompt,
     promptRef: props.promptRef,
     composerDraftTarget: TARGET,
-    editorRef: { current: null },
+    editorRef: {
+      current: {
+        focus: props.focusEditor,
+        setVimMode: () => {},
+        setVimNormalKeyInterceptor: () => {},
+      },
+    },
     onRespondToApproval: props.respond,
     sendNote: props.sendNote,
   });
@@ -67,6 +75,7 @@ function setup() {
   const sendNote = vi.fn(() => {
     sentDrafts.push(useComposerDraftStore.getState().getComposerDraft(TARGET)?.prompt ?? "");
   });
+  const focusEditor = vi.fn();
   const harness = (approvals: ReadonlyArray<PendingApproval>) => (
     <Harness
       approvals={approvals}
@@ -74,6 +83,7 @@ function setup() {
       promptRef={promptRef}
       respond={respond}
       sendNote={sendNote}
+      focusEditor={focusEditor}
     />
   );
   const type = async (text: string) => {
@@ -92,6 +102,7 @@ function setup() {
   return {
     respond,
     sendNote,
+    focusEditor,
     sentDrafts,
     harness,
     type,
@@ -112,6 +123,49 @@ describe("useTerminalApprovalPrompt", () => {
     await t.settle();
     await act(() => t.enter());
     expect(t.respond).toHaveBeenCalledWith(RuntimeRequestId.make("a"), "accept", undefined);
+  });
+
+  it("takes the keyboard when an answerable request shows, so Enter answers it", async () => {
+    using t = setup();
+    await using screen = await render(
+      <>
+        <button type="button">Expand tool output</button>
+        {t.harness([])}
+      </>,
+      { router: false },
+    );
+    screen.getByRole("button").element().focus();
+    await screen.rerender(
+      <>
+        <button type="button">Expand tool output</button>
+        {t.harness([approval("stale", false)])}
+      </>,
+    );
+    expect(t.focusEditor).not.toHaveBeenCalled();
+    await screen.rerender(
+      <>
+        <button type="button">Expand tool output</button>
+        {t.harness([approval("a")])}
+      </>,
+    );
+    expect(t.focusEditor).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves focus in another field, and in a thread kept behind Settings", async () => {
+    using t = setup();
+    const page = (approvals: ReadonlyArray<PendingApproval>, background = false) => (
+      <>
+        <input aria-label="Find in thread" />
+        <button type="button">Settings row</button>
+        <BackgroundThreadContext value={background}>{t.harness(approvals)}</BackgroundThreadContext>
+      </>
+    );
+    await using screen = await render(page([]), { router: false });
+    screen.getByRole("textbox").element().focus();
+    await screen.rerender(page([approval("a")]));
+    screen.getByRole("button").element().focus();
+    await screen.rerender(page([approval("b")], true));
+    expect(t.focusEditor).not.toHaveBeenCalled();
   });
 
   it("holds a send while the answer is in flight, after the request has gone", async () => {

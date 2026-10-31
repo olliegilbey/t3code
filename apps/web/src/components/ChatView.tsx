@@ -341,7 +341,7 @@ import {
   resolveSendEnvMode,
   startNewThreadForProject,
   codexArtifactTemplatePromptToAppend,
-  shouldRefocusComposerOnWindowFocus,
+  composerMayTakeFocus,
 } from "./ChatView.logic";
 import { useLocalStorage } from "~/hooks/useLocalStorage";
 import { useComposerHandleContext } from "../composerHandleContext";
@@ -2146,12 +2146,7 @@ export default function ChatView(props: ChatViewProps) {
         frame = window.requestAnimationFrame(() => {
           frame = null;
           if (document.querySelector("[data-mcp-app-fullscreen]") !== null) return;
-          if (
-            !isInSideChatPane(document.activeElement) &&
-            shouldRefocusComposerOnWindowFocus(document.activeElement)
-          ) {
-            focusComposerStable();
-          }
+          if (composerMayTakeFocus(document.activeElement)) focusComposerStable();
         });
       });
     };
