@@ -168,6 +168,31 @@ describe("useTerminalApprovalPrompt", () => {
     expect(t.focusEditor).not.toHaveBeenCalled();
   });
 
+  it("keeps a message you were typing as a message, not a reason to decline", async () => {
+    using t = setup();
+    using _timers = fakeTimers();
+    await using screen = await render(t.harness([]), { router: false });
+    await t.type("unrelated message");
+    await screen.rerender(t.harness([approval("a")]));
+    await t.settle();
+    await act(() => t.hook().onRun(0));
+    expect(t.respond).toHaveBeenLastCalledWith(RuntimeRequestId.make("a"), "accept", undefined);
+    await t.settle();
+    expect(useComposerDraftStore.getState().getComposerDraft(TARGET)?.prompt).toBe(
+      "unrelated message",
+    );
+    await screen.rerender(t.harness([approval("b")]));
+    await t.settle();
+    expect(await act(() => t.hook().onSubmit())).toBe(true);
+    expect(t.respond).toHaveBeenCalledTimes(1);
+    expect(useComposerDraftStore.getState().getComposerDraft(TARGET)?.prompt ?? "").toBe("");
+    // A second Enter straight after holding the message does not answer.
+    expect(t.enter()).toBe(false);
+    await screen.rerender(t.harness([]));
+    await t.settle();
+    expect(t.sentDrafts).toEqual(["unrelated message"]);
+  });
+
   it("holds a send while the answer is in flight, after the request has gone", async () => {
     using t = setup();
     using _timers = fakeTimers();

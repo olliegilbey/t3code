@@ -18,10 +18,10 @@ const TITLES = {
   "mcp-elicitation": "Allow app access?",
 } satisfies Record<PendingApproval["requestKind"], string>;
 
-function resultLine(decision: ProviderApprovalDecision) {
-  if (decision === "decline") return { tone: "declined", text: "✗ Declined" };
-  if (decision === "cancel") return { tone: "declined", text: "✗ Cancelled" };
-  return { tone: "approved", text: "✓ Approved" };
+function outcome(decision: ProviderApprovalDecision) {
+  if (decision === "decline") return { tone: "declined", mark: "✗", text: "Declined" };
+  if (decision === "cancel") return { tone: "declined", mark: "✗", text: "Cancelled" };
+  return { tone: "approved", mark: "✓", text: "Approved" };
 }
 
 export const TerminalApprovalPrompt = memo(function TerminalApprovalPrompt({
@@ -31,6 +31,7 @@ export const TerminalApprovalPrompt = memo(function TerminalApprovalPrompt({
   state,
   flashIndex,
   result,
+  hint,
   disabled,
   onRun,
   onFocusComposer,
@@ -41,15 +42,17 @@ export const TerminalApprovalPrompt = memo(function TerminalApprovalPrompt({
   state: TerminalApprovalState;
   flashIndex: number | null;
   result: ProviderApprovalDecision | null;
+  hint: string;
   disabled: boolean;
   onRun: (index: number) => void;
   onFocusComposer: () => void;
 }) {
   const canRespond = approval.responseCapability === "live";
-  const shownResult = result ? resultLine(result) : null;
+  const answered = result ? outcome(result) : null;
   return (
     <div
       data-terminal-approval-prompt
+      data-terminal-approval-outcome={answered?.tone}
       className="flex flex-col gap-1.5 px-3 pt-2 pb-1.5 font-mono text-xs/5"
       onClick={(event) => {
         // Selecting the command to copy it keeps the selection.
@@ -86,14 +89,11 @@ export const TerminalApprovalPrompt = memo(function TerminalApprovalPrompt({
       {approval.reason ? (
         <span className="text-muted-foreground select-text wrap-anywhere">{approval.reason}</span>
       ) : null}
-      {shownResult ? (
-        <div data-terminal-approval-result={shownResult.tone} role="status">
-          {shownResult.text}
-        </div>
-      ) : canRespond ? (
+      {canRespond ? (
         <div role="listbox" aria-label="Approval options" className="flex flex-col">
           {options.map((option, index) => {
-            const selected = index === state.selected;
+            // The answer keeps its row; only the marker and the pane's colour change.
+            const selected = answered ? index === flashIndex : index === state.selected;
             return (
               <button
                 key={option.decision}
@@ -111,11 +111,11 @@ export const TerminalApprovalPrompt = memo(function TerminalApprovalPrompt({
                 onClick={() => onRun(index)}
               >
                 <span aria-hidden className="w-[2ch] shrink-0">
-                  {selected ? "❯" : ""}
+                  {selected ? (answered?.mark ?? "❯") : ""}
                 </span>
                 <span className="shrink-0">{index + 1}.</span>
                 <span className="min-w-0 wrap-anywhere">{option.label}</span>
-                {flashIndex === index ? <span aria-label="Answering">…</span> : null}
+                {flashIndex === index && !answered ? <span aria-label="Answering">…</span> : null}
                 {state.reasonFor === option.decision ? (
                   <span data-terminal-approval-reason className="shrink-0">
                     + reason
@@ -133,10 +133,13 @@ export const TerminalApprovalPrompt = memo(function TerminalApprovalPrompt({
           Provider process is gone. Interrupt or restart the run to respond.
         </span>
       )}
+      {answered ? (
+        <span role="status" className="sr-only">
+          {answered.text}
+        </span>
+      ) : null}
       <div className="flex flex-wrap items-baseline gap-x-3 text-muted-foreground">
-        {canRespond && !shownResult ? (
-          <span>Enter to run · ↑↓ or j/k to choose · Tab to add a reason</span>
-        ) : null}
+        {canRespond ? <span>{hint}</span> : null}
         {approval.fullAccessOverride ? (
           <Popover>
             <PopoverTrigger openOnHover render={<InlineButton tone="muted" />}>
