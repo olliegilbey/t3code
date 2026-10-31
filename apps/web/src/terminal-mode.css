@@ -763,14 +763,38 @@ html[data-terminal-mode] [data-terminal-approval-prompt] {
   & [data-terminal-approval-reason] {
     color: var(--term-cyan);
   }
-  & [data-terminal-approval-result="approved"] {
-    color: var(--term-green);
-    font-weight: 700;
-  }
   & [data-terminal-approval-result="declined"] {
     color: var(--term-red);
     font-weight: 700;
   }
+  /* Answered: the prompt keeps its shape and takes the answer's colour until it goes. */
+  &[data-terminal-approval-outcome] {
+    border-inline-start-color: var(--term-outcome);
+
+    & [data-terminal-approval-title],
+    & [data-terminal-approval-option][data-selected],
+    & [data-terminal-approval-option][data-selected] > :first-child {
+      color: var(--term-outcome);
+    }
+  }
+  &[data-terminal-approval-outcome="approved"] {
+    --term-outcome: var(--term-green);
+  }
+  &[data-terminal-approval-outcome="declined"] {
+    --term-outcome: var(--term-red);
+  }
+}
+html[data-terminal-mode] [data-chat-composer-top-drawer]:has([data-terminal-approval-outcome]) {
+  --chat-composer-attached-outline: color-mix(in oklab, var(--term-outcome) 32%, transparent);
+  --chat-composer-attached-tint: color-mix(in oklab, var(--term-outcome) 10%, transparent);
+}
+html[data-terminal-mode]
+  [data-chat-composer-top-drawer]:has([data-terminal-approval-outcome="approved"]) {
+  --term-outcome: var(--term-green);
+}
+html[data-terminal-mode]
+  [data-chat-composer-top-drawer]:has([data-terminal-approval-outcome="declined"]) {
+  --term-outcome: var(--term-red);
 }
 @keyframes terminal-approval-flash {
   from {
