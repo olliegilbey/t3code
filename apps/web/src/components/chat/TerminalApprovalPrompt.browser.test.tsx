@@ -23,6 +23,7 @@ it("hands the keyboard back on a click, but keeps a selection made to copy the c
       state={{ selected: 0, reasonFor: null }}
       flashIndex={null}
       result={null}
+      hint="Enter to run"
       disabled={false}
       onRun={onRun}
       onFocusComposer={onFocusComposer}
