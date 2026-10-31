@@ -1078,11 +1078,10 @@ export function hasServerAcknowledgedLocalDispatch(input: {
   );
 }
 
-// Returning to the window should land the caret in the composer, so the reader can type right
-// away. The exceptions are places where focus is deliberate: another text field, a terminal in
-// the drawer or the right panel, an open dialog, menu, or popup, or a region or sidebar row
-// reached from the keyboard. A plain focused button or a clicked row yields to the composer.
-export function shouldRefocusComposerOnWindowFocus(
+// Returning to the window, or a permission request showing, lands the caret in the composer.
+// Not from deliberate focus: another text field, a terminal, the side chat, an open dialog, menu
+// or popup, or a region or sidebar row reached from the keyboard. A plain button yields.
+export function composerMayTakeFocus(
   activeElement:
     | (Pick<Element, "tagName" | "closest" | "getAttribute"> & { isContentEditable?: boolean })
     | null,
@@ -1101,7 +1100,7 @@ export function shouldRefocusComposerOnWindowFocus(
   }
   return (
     activeElement.closest(
-      '[data-workspace-area]:focus-visible, [data-sidebar-row]:focus-visible, [role="dialog"], [role="alertdialog"], [role="application"], [role="menu"], [role="listbox"], [data-slot$="-popup"], [data-terminal-owner]',
+      '[data-workspace-area]:focus-visible, [data-sidebar-row]:focus-visible, [role="dialog"], [role="alertdialog"], [role="application"], [role="menu"], [role="listbox"], [data-slot$="-popup"], [data-terminal-owner], [data-side-chat-pane]',
     ) === null
   );
 }

@@ -3291,6 +3291,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                     {...terminalApproval.view}
                     disabled={terminalApproval.disabled}
                     onRun={terminalApproval.onRun}
+                    onFocusComposer={terminalApproval.focusComposer}
                   />
                 ) : null}
               </ComposerBanner.Root>
