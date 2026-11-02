@@ -721,6 +721,11 @@ html[data-terminal-mode] [data-terminal-statusline] {
       font-size: inherit;
     }
   }
+  /* The branch keeps its name when the strip collapses the other labels to icons. */
+  & [data-composer-branch] :is([data-composer-label], [data-composer-label-motion]) {
+    max-width: none;
+    opacity: 1;
+  }
   & [data-statusline-context] {
     padding-inline-end: 1ch;
     color: var(--foreground);
