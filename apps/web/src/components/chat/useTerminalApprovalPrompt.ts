@@ -8,6 +8,7 @@ import { type RefObject, use, useEffect, useRef, useState } from "react";
 import { useStableCallback } from "~/hooks/useStableCallback";
 import { composerTargetKey, useComposerDraftStore } from "../../composerDraftStore";
 import type { PendingApproval } from "../../session-logic";
+import { isInSideChatPane } from "../../lib/sideChatPane";
 import { useTerminalMode } from "../../terminalMode";
 import { composerMayTakeFocus } from "../ChatView.logic";
 import type { ComposerPromptEditorHandle } from "../ComposerPromptEditorTiptap";
@@ -37,6 +38,19 @@ interface TerminalApprovalView {
   readonly flashIndex: number | null;
   readonly result: ProviderApprovalDecision | null;
   readonly hint: string;
+}
+
+const PROMPT_KEY = /^(?:Enter|ArrowUp|ArrowDown|Tab|[jk1-9])$/;
+
+// A click on chat text focuses the chat's region rather than a control. Keys pressed there
+// belong to the prompt, as they would in a terminal.
+function isStrayFocus(target: EventTarget | null) {
+  if (target === document.body) return true;
+  return (
+    target instanceof Element &&
+    target.matches('[data-workspace-area="conversation"], [data-workspace-area="composer"]') &&
+    !isInSideChatPane(target)
+  );
 }
 
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
@@ -243,6 +257,41 @@ export function useTerminalApprovalPrompt(input: {
     return () => editor.setVimNormalKeyInterceptor(null);
   }, [active, editorRef, onVimKey]);
 
+  const onKey = (key: string, event: KeyboardEvent): boolean => {
+    if (event.isComposing || event.altKey || event.metaKey || event.ctrlKey) return false;
+    const empty = promptRef.current.trim() === "";
+    if (feedback !== null) return empty && key === "Enter";
+    if (!active || !empty || event.shiftKey) return false;
+    if (key === "Enter") {
+      run(null);
+      return true;
+    }
+    if (key === "ArrowUp" || key === "ArrowDown") {
+      update({ type: "move", delta: key === "ArrowUp" ? -1 : 1 });
+      return true;
+    }
+    if (key === "Tab") {
+      update({ type: "bindReason" });
+      editorRef.current?.setVimMode("insert");
+      return true;
+    }
+    return false;
+  };
+  const onStrayKey = useStableCallback((event: KeyboardEvent) => {
+    if (event.defaultPrevented || event.shiftKey || !PROMPT_KEY.test(event.key)) return;
+    if (event.isComposing || event.altKey || event.metaKey || event.ctrlKey) return;
+    if (!isStrayFocus(event.target)) return;
+    event.preventDefault();
+    editorRef.current?.focus();
+    if (!onKey(event.key, event)) onVimKey(event.key);
+  });
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- window keys reach the prompt while focus rests on the chat itself
+  useEffect(() => {
+    if (!active || background) return;
+    window.addEventListener("keydown", onStrayKey);
+    return () => window.removeEventListener("keydown", onStrayKey);
+  }, [active, background, onStrayKey]);
+
   const label = options.find((option) => option.decision === state.reasonFor)?.label;
   return {
     view:
@@ -280,25 +329,6 @@ export function useTerminalApprovalPrompt(input: {
       run(null);
       return true;
     },
-    onKey: (key: string, event: KeyboardEvent): boolean => {
-      if (event.isComposing || event.altKey || event.metaKey || event.ctrlKey) return false;
-      const empty = promptRef.current.trim() === "";
-      if (feedback !== null) return empty && key === "Enter";
-      if (!active || !empty || event.shiftKey) return false;
-      if (key === "Enter") {
-        run(null);
-        return true;
-      }
-      if (key === "ArrowUp" || key === "ArrowDown") {
-        update({ type: "move", delta: key === "ArrowUp" ? -1 : 1 });
-        return true;
-      }
-      if (key === "Tab") {
-        update({ type: "bindReason" });
-        editorRef.current?.setVimMode("insert");
-        return true;
-      }
-      return false;
-    },
+    onKey,
   };
 }
