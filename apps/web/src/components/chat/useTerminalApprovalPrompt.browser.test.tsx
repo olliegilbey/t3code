@@ -8,7 +8,10 @@ import {
 import { useImperativeHandle, type RefObject } from "react";
 import { describe, expect, it, vi } from "vite-plus/test";
 
+import { userEvent } from "vite-plus/test/browser";
+
 import { act, fakeTimers, render } from "../../../test/render";
+import { workspaceAreaProps } from "../../lib/workspaceFocus";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import type { PendingApproval } from "../../session-logic";
 import { setTerminalModeEnabled } from "../../terminalMode";
@@ -149,6 +152,23 @@ describe("useTerminalApprovalPrompt", () => {
       </>,
     );
     expect(t.focusEditor).toHaveBeenCalledTimes(1);
+  });
+
+  it("answers Enter pressed while a click has left focus on the conversation", async () => {
+    using t = setup();
+    using _timers = fakeTimers();
+    await using screen = await render(
+      <>
+        <div {...workspaceAreaProps("conversation", 1, "Conversation")}>Agent output</div>
+        {t.harness([approval("a")])}
+      </>,
+      { router: false },
+    );
+    await t.settle();
+    await userEvent.click(screen.getByText("Agent output"));
+    await userEvent.keyboard("{Enter}");
+    expect(t.respond).toHaveBeenCalledWith(RuntimeRequestId.make("a"), "accept", undefined);
+    expect(t.focusEditor).toHaveBeenCalled();
   });
 
   it("leaves focus in another field, and in a thread kept behind Settings", async () => {
