@@ -454,6 +454,57 @@ describe("ssh tunnel scripts", () => {
         );
       }),
   );
+
+  // An ssh login waiting on an approval nobody sees holds the target's lock.
+  it.effect("cancelSetup lets a queued setup run ssh again", () =>
+    Effect.gen(function* () {
+      const firstLaunchStarted = yield* Deferred.make<void>();
+      let launches = 0;
+      let killedLaunches = 0;
+      const target = { alias: "devbox", hostname: "devbox", username: null, port: null };
+      const spawner = ChildProcessSpawner.make((command) =>
+        Effect.gen(function* () {
+          const args = commandArgs(command);
+          if (args.includes("-G")) return makeSuccessfulProcess("");
+          if (args.includes("-N")) return makeRunningProcess(() => undefined);
+          if (args.some((arg, index) => arg === "-s" && args[index + 1] === "--")) {
+            launches += 1;
+            if (launches === 1) {
+              yield* Effect.addFinalizer(() => Effect.sync(() => void (killedLaunches += 1)));
+              yield* Deferred.succeed(firstLaunchStarted, undefined);
+              return makeRunningProcess(() => undefined);
+            }
+            return makeSuccessfulProcess('{"remotePort":3773}\n');
+          }
+          return makeSuccessfulProcess("");
+        }),
+      );
+      const layer = Layer.mergeAll(
+        NodeServices.layer,
+        NodeCrypto.layer,
+        Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, spawner),
+        Layer.succeed(HttpClient.HttpClient, testHttpClient),
+        Layer.succeed(NetService.NetService, testNetService),
+        SshAuth.SshPasswordPrompt.disabledLayer,
+        SshTunnel.SshEnvironmentManager.layer({ resolveCliRunner: Effect.succeed(ARCHIVE) }),
+      );
+      yield* Effect.gen(function* () {
+        const manager = yield* SshTunnel.SshEnvironmentManager;
+        const stuck = yield* Effect.forkChild(manager.ensureEnvironment(target));
+        const queued = yield* Effect.forkChild(manager.ensureEnvironment(target));
+        yield* Deferred.await(firstLaunchStarted);
+
+        yield* manager.cancelSetup(target);
+        const stuckExit = yield* Fiber.await(stuck);
+        const bootstrap = yield* Fiber.join(queued);
+
+        assert.isTrue(stuckExit._tag === "Failure");
+        assert.equal(killedLaunches, 1);
+        assert.equal(launches, 2);
+        assert.equal(bootstrap.remotePort, 3773);
+      }).pipe(Effect.provide(layer), Effect.scoped);
+    }),
+  );
 });
 
 // On macOS, Node can bind 127.0.0.1:<port> while another process (such as the
