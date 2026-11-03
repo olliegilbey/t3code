@@ -233,6 +233,7 @@ const layerCapabilities = Layer.effectContext(
               }),
             ),
           disconnect: () => Effect.void,
+          cancelSetup: () => Effect.void,
         }),
       ),
     );

@@ -379,6 +379,7 @@ const makeHarness = Effect.fn("TestEnvironmentRegistry.makeHarness")(function* (
     provision: () => Effect.die(new Error("SSH provisioning is not used.")),
     prepare: () => Effect.die(new Error("SSH preparation is not used.")),
     disconnect: (target) => Ref.update(disconnectedSshTargets, (current) => [...current, target]),
+    cancelSetup: () => Effect.void,
   });
   const connectedRoutes = yield* Ref.make<ReadonlyArray<string>>([]);
   const checkRoute = (route: ConnectionRoute) =>
