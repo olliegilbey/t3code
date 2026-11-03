@@ -281,6 +281,7 @@ const prepareDirectBearer = Effect.fn("TestRemoteAuthorization.prepareDirectBear
           provision: unused,
           prepare: unused,
           disconnect: unused,
+          cancelSetup: unused,
         }),
       ),
     ),

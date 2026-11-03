@@ -158,6 +158,16 @@ export const disconnectSshEnvironment = DesktopIpc.makeIpcMethod({
   }),
 });
 
+export const cancelSshEnvironmentSetup = DesktopIpc.makeIpcMethod({
+  channel: IpcChannels.CANCEL_SSH_ENVIRONMENT_SETUP_CHANNEL,
+  payload: DesktopSshEnvironmentTargetSchema,
+  result: Schema.Void,
+  handler: Effect.fn("desktop.ipc.sshEnvironment.cancelSetup")(function* (target) {
+    const sshEnvironment = yield* DesktopSshEnvironment.DesktopSshEnvironment;
+    yield* sshEnvironment.cancelSetup(target);
+  }),
+});
+
 export const fetchSshEnvironmentDescriptor = DesktopIpc.makeIpcMethod({
   channel: IpcChannels.FETCH_SSH_ENVIRONMENT_DESCRIPTOR_CHANNEL,
   payload: DesktopSshHttpBaseUrlInputSchema,
