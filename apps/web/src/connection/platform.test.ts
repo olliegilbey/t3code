@@ -85,6 +85,9 @@ function makeBridge(
     disconnectSshEnvironment: async () => {
       calls.push("disconnect");
     },
+    cancelSshEnvironmentSetup: async () => {
+      calls.push("cancel");
+    },
     fetchSshSessionState: async () => {
       calls.push("session");
       return {
