@@ -708,6 +708,11 @@ html[data-terminal-mode] [data-terminal-statusline] {
     flex: 1;
     min-width: 0;
     display: flex;
+
+    & > * {
+      flex: 1;
+      min-width: 0;
+    }
   }
   & [data-slot="composer-context-strip"] {
     padding: 0;
@@ -721,10 +726,15 @@ html[data-terminal-mode] [data-terminal-statusline] {
       font-size: inherit;
     }
   }
-  /* The branch keeps its name when the strip collapses the other labels to icons. */
-  & [data-composer-branch] :is([data-composer-label], [data-composer-label-motion]) {
+  /* Labels stay as text when the strip would collapse them to icons; the branch is uncapped. */
+  & [data-composer-label] {
     max-width: none;
+  }
+  & [data-composer-label-motion] {
     opacity: 1;
+  }
+  & [data-composer-branch] [data-composer-label-motion] {
+    max-width: none;
   }
   & [data-statusline-context] {
     padding-inline-end: 1ch;
