@@ -50,6 +50,7 @@ export function useDefaultDiffPanel(input: {
     const panels = useRightPanelStore.getState();
     // A thread whose panel the user already arranged keeps that arrangement.
     if (threadKey in panels.byThreadKey) return;
-    panels.open(threadRef, "diff");
+    // Automatic, so the panel opens without taking focus from the composer.
+    panels.open(threadRef, "diff", true);
   }, [terminalMode, enabled, threadRef, isGitRepo]);
 }
