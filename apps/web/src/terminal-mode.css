@@ -77,6 +77,8 @@ html[data-terminal-mode] {
   --success-foreground: var(--term-green);
 
   --radius: 0.125rem;
+  /* Buttons, menu triggers and sidebar rows take their own radius; they square off too. */
+  --control-radius: var(--radius);
 }
 
 html.dark[data-terminal-mode] {
@@ -528,6 +530,14 @@ html[data-terminal-mode] [data-slot="composer-shell"] {
 html[data-terminal-mode] [data-workspace-area="composer"]:focus-visible {
   outline: none;
 }
+/* Dialogs and the command palette square off like menus. */
+html[data-terminal-mode] .dialog-glass {
+  border-radius: var(--radius);
+}
+html[data-terminal-mode] [data-slot="command-footer"] {
+  border-end-start-radius: var(--radius);
+  border-end-end-radius: var(--radius);
+}
 html[data-terminal-mode] .dropdown-glass {
   border-radius: var(--radius);
   background: color-mix(in oklab, var(--term-panel) var(--glass-opacity), transparent);
@@ -540,6 +550,11 @@ html[data-terminal-mode] [data-slot="composer-host"],
 html[data-terminal-mode] [data-slot="composer-host"]::before,
 html[data-terminal-mode] [data-slot="composer-shell"]::before {
   border-radius: var(--radius);
+}
+/* A request or notice attached above the composer shares its top edge, square like it. */
+html[data-terminal-mode] [data-chat-composer-top-drawer]::before {
+  border-start-start-radius: var(--radius);
+  border-start-end-radius: var(--radius);
 }
 
 /* The composer reads as the next prompt line. */
