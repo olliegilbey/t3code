@@ -26,6 +26,7 @@ function outcome(decision: ProviderApprovalDecision) {
 
 export const TerminalApprovalPrompt = memo(function TerminalApprovalPrompt({
   approval,
+  source,
   position,
   options,
   state,
@@ -37,6 +38,7 @@ export const TerminalApprovalPrompt = memo(function TerminalApprovalPrompt({
   onFocusComposer,
 }: {
   approval: PendingApproval;
+  source: string | null;
   position: { index: number; total: number };
   options: ReadonlyArray<ProviderApprovalOption>;
   state: TerminalApprovalState;
@@ -70,6 +72,9 @@ export const TerminalApprovalPrompt = memo(function TerminalApprovalPrompt({
         <span data-terminal-approval-title className="font-bold">
           {TITLES[approval.requestKind]}
         </span>
+        {source ? (
+          <span className="min-w-0 truncate text-muted-foreground">from {source}</span>
+        ) : null}
         {approval.appName ? (
           <span className="min-w-0 truncate text-muted-foreground">{approval.appName}</span>
         ) : null}

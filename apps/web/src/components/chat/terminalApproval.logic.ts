@@ -90,3 +90,25 @@ export function planApprovalResponse(
   if (decision === "decline" && supportsFeedback) return { decision, feedback: reason };
   return { decision, followUp: reason };
 }
+
+const DECIDED = {
+  accept: "approved",
+  acceptForSession: "approved for this session",
+  acceptAlways: "always allowed",
+  decline: "declined",
+  cancel: "cancelled",
+} satisfies Record<ProviderApprovalDecision, string>;
+
+/** A reason given for a subagent's request goes to the parent, which passes it on. */
+export function subagentFollowUp(
+  title: string,
+  approval: { readonly detail?: string; readonly requestKind: string },
+  decision: ProviderApprovalDecision,
+  reason: string,
+): string {
+  const text = approval.detail || approval.requestKind;
+  const first = text.split("\n", 1)[0] ?? "";
+  const request =
+    first.length < text.length || first.length > 200 ? `${first.slice(0, 200)}…` : first;
+  return `I ${DECIDED[decision]} a request from the subagent "${title}": ${request}\nPass this on to it: ${reason}`;
+}

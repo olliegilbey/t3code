@@ -249,6 +249,10 @@ import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { Kbd } from "../ui/kbd";
 import { useSoftwareKeyboardOpen } from "../../hooks/useSoftwareKeyboardOpen";
 import { useStableCallback } from "../../hooks/useStableCallback";
+import { useActiveThreadRef } from "../../hooks/useActiveThreadRef";
+import { useAtomValue } from "@effect/atom-react";
+import { childThreadApprovalsAtom, threadEnvironment } from "../../state/threads";
+import { useAtomCommand } from "../../state/use-atom-command";
 import { usePanelAnimationSettings } from "../../panelAnimations";
 import { readEnvironmentScope, readPreparedConnection } from "../../state/session";
 import type { ReviewCommentContext } from "../../reviewCommentContext";
@@ -575,6 +579,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   } = props;
   const primaryEnvironmentId = usePrimaryEnvironmentId();
   const composerDraftTargetKey = composerTargetKey(composerDraftTarget);
+  const childApprovals = useAtomValue(childThreadApprovalsAtom(useActiveThreadRef(activeThread)));
+  const respondToChildApproval = useAtomCommand(threadEnvironment.respondToApproval);
   const {
     heldRequestIds,
     onDraftChange: onTypingGuardDraftChange,
@@ -583,6 +589,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     onSend: onTypingGuardSend,
   } = useComposerTypingGuard(composerDraftTargetKey, [
     ...pendingApprovals.map((request) => request.requestId),
+    ...childApprovals.map((child) => child.approval.requestId),
     ...incomingPendingUserInputs.map((request) => request.requestId),
   ]);
   // A layout effect so the timeline never paints a held approval as answerable.
@@ -2183,6 +2190,20 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     composerDraftTarget,
     editorRef: composerEditorRef,
     onRespondToApproval,
+    childApprovals:
+      pendingUserInputs.length === 0
+        ? childApprovals.filter((child) => !heldRequestIds.has(child.approval.requestId))
+        : [],
+    onRespondToChildApproval: (child, decision, feedback) =>
+      respondToChildApproval({
+        environmentId: child.thread.environmentId,
+        input: {
+          threadId: child.thread.threadId,
+          requestId: child.approval.requestId,
+          decision,
+          ...(feedback === undefined ? {} : { feedback }),
+        },
+      }),
     sendNote: sendApprovalNoteStable,
   });
   const handleSubmitMessage = (event: React.MouseEvent<HTMLButtonElement>) => {

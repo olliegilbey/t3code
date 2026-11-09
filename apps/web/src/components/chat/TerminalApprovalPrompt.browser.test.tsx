@@ -18,6 +18,7 @@ it("hands the keyboard back on a click, but keeps a selection made to copy the c
         detail: "rm -rf build",
         responseCapability: "live",
       }}
+      source={null}
       position={{ index: 0, total: 1 }}
       options={orderApprovalOptions(undefined)}
       state={{ selected: 0, reasonFor: null }}

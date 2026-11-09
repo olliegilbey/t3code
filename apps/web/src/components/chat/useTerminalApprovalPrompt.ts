@@ -1,4 +1,7 @@
-import type { ApprovalResponder } from "@t3tools/client-runtime/state/thread-requests";
+import type {
+  ApprovalResponder,
+  ChildThreadApproval,
+} from "@t3tools/client-runtime/state/thread-requests";
 import type {
   ProviderApprovalDecision,
   ProviderApprovalOption,
@@ -20,6 +23,7 @@ import {
   planApprovalResponse,
   reduceTerminalApproval,
   resolveTerminalApprovalSubmit,
+  subagentFollowUp,
   type TerminalApprovalEvent,
   type TerminalApprovalState,
 } from "./terminalApproval.logic";
@@ -32,6 +36,8 @@ type DraftTarget = ChatComposerProps["composerDraftTarget"];
 
 interface TerminalApprovalView {
   readonly approval: PendingApproval;
+  /** The subagent that asked, for a request surfaced from a child thread. */
+  readonly source: string | null;
   readonly options: ReadonlyArray<ProviderApprovalOption>;
   readonly state: TerminalApprovalState;
   readonly position: { index: number; total: number };
@@ -64,7 +70,7 @@ function putNoteInDraft(target: DraftTarget, text: string) {
 /**
  * Terminal mode's permission prompt: Enter answers the shown request, arrows and j/k choose,
  * Tab gives the chosen answer a reason. A reason on anything but a decline goes to the agent
- * as a message once no request is left open.
+ * as a message once no request is left open. Subagents' requests follow the thread's own.
  */
 export function useTerminalApprovalPrompt(input: {
   readonly approval: PendingApproval | null;
@@ -79,6 +85,12 @@ export function useTerminalApprovalPrompt(input: {
     "focus" | "setVimMode" | "setVimNormalKeyInterceptor"
   > | null>;
   readonly onRespondToApproval: ApprovalResponder;
+  readonly childApprovals: ReadonlyArray<ChildThreadApproval>;
+  readonly onRespondToChildApproval: (
+    child: ChildThreadApproval,
+    decision: ProviderApprovalDecision,
+    feedback?: string,
+  ) => ReturnType<ApprovalResponder>;
   readonly sendNote: () => void;
 }) {
   const { approval, pendingApprovals, promptRef, composerDraftTarget, editorRef, sendNote } = input;
@@ -96,7 +108,10 @@ export function useTerminalApprovalPrompt(input: {
   const [armedFor, setArmedFor] = useState<string | null>(null);
   const [holds, setHolds] = useState(0);
 
-  const shown = terminalMode ? approval : null;
+  const child = approval === null ? (input.childApprovals[0] ?? null) : null;
+  const shown = terminalMode ? (approval ?? child?.approval ?? null) : null;
+  const source = child?.title ?? null;
+  const total = pendingApprovals.length + input.childApprovals.length;
   const options = orderApprovalOptions(shown?.options);
   const empty = input.prompt.trim() === "";
   const own = shown && stored?.requestId === shown.requestId ? stored : null;
@@ -156,20 +171,26 @@ export function useTerminalApprovalPrompt(input: {
       ? { decision: picked.decision, reason: carried ? null : text.trim() || null }
       : resolveTerminalApprovalSubmit(state, options, text);
     const plan = planApprovalResponse(decision, reason, shown.supportsFeedback === true);
-    const followUp = plan.followUp;
+    const followUp =
+      plan.followUp !== undefined && child
+        ? subagentFollowUp(child.title, shown, plan.decision, plan.followUp)
+        : plan.followUp;
     const target = composerDraftTarget;
     const view: TerminalApprovalView = {
       approval: shown,
+      source,
       options,
       state: picked ? { ...state, selected: index ?? state.selected } : state,
-      position: { index: 0, total: pendingApprovals.length },
+      position: { index: 0, total },
       flashIndex: picked ? index : options.findIndex((option) => option.decision === decision),
       result: null,
       hint,
     };
     setFeedback(view);
     void Promise.all([
-      input.onRespondToApproval(shown.requestId, plan.decision, plan.feedback),
+      child
+        ? input.onRespondToChildApproval(child, plan.decision, plan.feedback)
+        : input.onRespondToApproval(shown.requestId, plan.decision, plan.feedback),
       wait(FLASH_MS),
     ]).then(([response]) => {
       if (response?._tag !== "Success") {
@@ -299,9 +320,10 @@ export function useTerminalApprovalPrompt(input: {
       (shown
         ? {
             approval: shown,
+            source,
             options,
             state,
-            position: { index: 0, total: pendingApprovals.length },
+            position: { index: 0, total },
             flashIndex: null,
             result: null,
             hint,

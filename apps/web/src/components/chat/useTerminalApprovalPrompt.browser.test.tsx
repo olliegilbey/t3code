@@ -1,4 +1,7 @@
-import type { ApprovalResponder } from "@t3tools/client-runtime/state/thread-requests";
+import type {
+  ApprovalResponder,
+  ChildThreadApproval,
+} from "@t3tools/client-runtime/state/thread-requests";
 import {
   EnvironmentId,
   RuntimeRequestId,
@@ -35,8 +38,23 @@ function approval(id: string, live = true): PendingApproval {
   };
 }
 
+function childApproval(id: string): ChildThreadApproval {
+  return {
+    thread: { environmentId: TARGET.environmentId, threadId: ThreadId.make("thread-subagent") },
+    title: "Compile task",
+    approval: approval(id),
+  };
+}
+
+type ChildResponder = (
+  child: ChildThreadApproval,
+  ...answer: Parameters<ApprovalResponder> extends [unknown, ...infer Rest] ? Rest : never
+) => ReturnType<ApprovalResponder>;
+
 function Harness(props: {
   readonly approvals: ReadonlyArray<PendingApproval>;
+  readonly subagents: ReadonlyArray<ChildThreadApproval>;
+  readonly respondToChild: ChildResponder;
   readonly hookRef: RefObject<Hook | null>;
   readonly promptRef: { current: string };
   readonly respond: ApprovalResponder;
@@ -47,6 +65,8 @@ function Harness(props: {
   const result = useTerminalApprovalPrompt({
     approval: props.approvals[0] ?? null,
     pendingApprovals: props.approvals,
+    childApprovals: props.subagents,
+    onRespondToChildApproval: props.respondToChild,
     respondingRequestIds: [],
     canOperate: true,
     prompt,
@@ -74,14 +94,22 @@ function setup() {
   const respond = vi.fn<ApprovalResponder>(
     async () => ({ _tag: "Success" }) as Awaited<ReturnType<ApprovalResponder>>,
   );
+  const respondToChild = vi.fn<ChildResponder>(
+    async () => ({ _tag: "Success" }) as Awaited<ReturnType<ApprovalResponder>>,
+  );
   const sentDrafts: string[] = [];
   const sendNote = vi.fn(() => {
     sentDrafts.push(useComposerDraftStore.getState().getComposerDraft(TARGET)?.prompt ?? "");
   });
   const focusEditor = vi.fn();
-  const harness = (approvals: ReadonlyArray<PendingApproval>) => (
+  const harness = (
+    approvals: ReadonlyArray<PendingApproval>,
+    subagents: ReadonlyArray<ChildThreadApproval> = [],
+  ) => (
     <Harness
       approvals={approvals}
+      subagents={subagents}
+      respondToChild={respondToChild}
       hookRef={hookRef}
       promptRef={promptRef}
       respond={respond}
@@ -104,6 +132,7 @@ function setup() {
   const settle = () => act(() => vi.advanceTimersByTimeAsync(2000));
   return {
     respond,
+    respondToChild,
     sendNote,
     focusEditor,
     sentDrafts,
@@ -126,6 +155,31 @@ describe("useTerminalApprovalPrompt", () => {
     await t.settle();
     await act(() => t.enter());
     expect(t.respond).toHaveBeenCalledWith(RuntimeRequestId.make("a"), "accept", undefined);
+  });
+
+  it("answers a subagent's request on its own thread, after the thread's own, and tells the parent why", async () => {
+    using t = setup();
+    using _timers = fakeTimers();
+    const child = childApproval("c");
+    await using screen = await render(t.harness([approval("a")], [child]), { router: false });
+    await t.settle();
+    await act(() => t.enter());
+    expect(t.respond).toHaveBeenCalledWith(RuntimeRequestId.make("a"), "accept", undefined);
+    await t.settle();
+    await screen.rerender(t.harness([], [child]));
+    await t.settle();
+    expect(t.hook().view?.source).toBe("Compile task");
+    await t.type("use bun");
+    await act(() => t.hook().onRun(0));
+    expect(t.respondToChild).toHaveBeenCalledWith(child, "accept", undefined);
+    expect(t.respond).toHaveBeenCalledTimes(1);
+    await screen.rerender(t.harness([], []));
+    await t.settle();
+    // The parent asked for the subagent's work, so its reason goes there with what it answered.
+    expect(t.sentDrafts).toHaveLength(1);
+    expect(t.sentDrafts[0]).toContain("Compile task");
+    expect(t.sentDrafts[0]).toContain("run c");
+    expect(t.sentDrafts[0]).toContain("use bun");
   });
 
   it("takes the keyboard when an answerable request shows, so Enter answers it", async () => {
