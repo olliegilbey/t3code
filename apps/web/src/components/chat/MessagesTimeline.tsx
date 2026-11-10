@@ -137,6 +137,7 @@ import { useThreadFindPositionReader } from "./useThreadFindPositionReader";
 import { ThreadActivityAnnouncer } from "./ThreadActivityAnnouncer";
 import { useStableHandoffRuns, useIncrementalTimelineRows, useStableRows } from "./useTimelineRows";
 import { useClientSettings } from "../../hooks/useSettings";
+import { useTerminalMode } from "../../terminalMode";
 
 function timelineListStateFor(identity: string): {
   readonly identity: string;
@@ -414,6 +415,15 @@ const ConversationTimeline = memo(function ConversationTimeline({
     ...timelineListStateFor(listIdentityKey),
     findOpenAtOpening: findOpen,
   }));
+  const disclosuresOpenByDefault = useTerminalMode();
+  // With disclosures open by default the sets hold toggled ids, so revealing removes one.
+  const reveal = <T,>(ids: ReadonlySet<T>, id: T): ReadonlySet<T> => {
+    if (ids.has(id) !== disclosuresOpenByDefault) return ids;
+    const next = new Set(ids);
+    if (disclosuresOpenByDefault) next.delete(id);
+    else next.add(id);
+    return next;
+  };
   const [expandedRunIds, setExpandedRunIds] = useState<ReadonlySet<RunId>>(
     () => listState.rememberedPosition?.disclosures?.runs ?? new Set(),
   );
@@ -537,9 +547,9 @@ const ConversationTimeline = memo(function ConversationTimeline({
     ) {
       if (latestRun.runId === previousRunId) {
         if (observedLatestRun.status === "running" && latestRun.status === "interrupted") {
-          setExpandedRunIds((existing) => new Set(existing).add(latestRun.runId));
+          setExpandedRunIds((existing) => reveal(existing, latestRun.runId));
         }
-      } else {
+      } else if (!disclosuresOpenByDefault) {
         setExpandedRunIds((existing) => {
           if (!existing.has(previousRunId)) return existing;
           const next = new Set(existing);
@@ -572,9 +582,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
   if (expandedFindRunId !== activeFindRunId) {
     setExpandedFindRunId(activeFindRunId);
     if (activeFindRunId) {
-      setExpandedRunIds((previous) =>
-        previous.has(activeFindRunId) ? previous : new Set(previous).add(activeFindRunId),
-      );
+      setExpandedRunIds((previous) => reveal(previous, activeFindRunId));
     }
   }
   // A cited response folded inside a turn opens its fold once per activation;
@@ -611,21 +619,16 @@ const ConversationTimeline = memo(function ConversationTimeline({
     ).get(citedEntry.id);
     setCitationExpandedFor(citationRequest.key);
     if (citedRunId) {
-      setExpandedRunIds((previous) =>
-        previous.has(citedRunId) ? previous : new Set(previous).add(citedRunId),
-      );
+      setExpandedRunIds((previous) => reveal(previous, citedRunId));
     }
     const citedAttempt = citedEntry.attempt;
     if (citedAttempt?.status === "superseded") {
-      setExpandedAttemptIds((previous) =>
-        previous.has(citedAttempt.id) ? previous : new Set(previous).add(citedAttempt.id),
-      );
+      setExpandedAttemptIds((previous) => reveal(previous, citedAttempt.id));
     }
   }
-  const visibleExpandedRunIds =
-    !activeFindRunId || paintedExpandedRunIds.has(activeFindRunId)
-      ? paintedExpandedRunIds
-      : new Set(paintedExpandedRunIds).add(activeFindRunId);
+  const visibleExpandedRunIds = activeFindRunId
+    ? reveal(paintedExpandedRunIds, activeFindRunId)
+    : paintedExpandedRunIds;
 
   const activeFindAttemptId = activeFindMatch
     ? timelineEntries.find((entry) => entry.id === activeFindMatch.entryId)?.attempt?.id
@@ -634,15 +637,12 @@ const ConversationTimeline = memo(function ConversationTimeline({
   if (expandedFindAttemptId !== activeFindAttemptId) {
     setExpandedFindAttemptId(activeFindAttemptId);
     if (activeFindAttemptId) {
-      setExpandedAttemptIds((previous) =>
-        previous.has(activeFindAttemptId) ? previous : new Set(previous).add(activeFindAttemptId),
-      );
+      setExpandedAttemptIds((previous) => reveal(previous, activeFindAttemptId));
     }
   }
-  const visibleExpandedAttemptIds =
-    activeFindAttemptId && !paintedExpandedAttemptIds.has(activeFindAttemptId)
-      ? new Set(paintedExpandedAttemptIds).add(activeFindAttemptId)
-      : paintedExpandedAttemptIds;
+  const visibleExpandedAttemptIds = activeFindAttemptId
+    ? reveal(paintedExpandedAttemptIds, activeFindAttemptId)
+    : paintedExpandedAttemptIds;
 
   const isVisiblePendingApproval = (approval: PendingApproval) =>
     !heldApprovalRequestIds?.has(approval.requestId);
@@ -657,6 +657,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
     expandedRunIds: visibleExpandedRunIds,
     expandedAttemptIds: visibleExpandedAttemptIds,
     expandedWorkGroupIds,
+    disclosuresOpenByDefault,
     isWorking,
     runlessWorkActive,
     activeTurnStartedAt,
@@ -1410,6 +1411,8 @@ function keyExtractor(item: MessagesTimelineRow) {
 // LegendList estimates unmeasured rows from their type's average. Long messages of equal length
 // can differ in height by orders of magnitude, so each gets its own type to avoid nested-update loops.
 function getItemType(item: MessagesTimelineRow) {
+  // Expanded tool lists are far taller than one-line work rows; keep their size estimates apart.
+  if (item.kind === "work" && item.isExpandedToolGroup) return "work:details";
   if (item.kind !== "message") return item.kind;
   const lengthBucket = Math.max(0, Math.floor(Math.log2(item.message.text.length / 1000)));
   return lengthBucket < 2

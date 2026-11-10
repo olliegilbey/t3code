@@ -9,6 +9,7 @@ import {
   parseVsCodeThemeFile,
   resolveThemeLabelCollisions,
 } from "./vscodeThemeImport";
+import { isTerminalAnsiColorKey, sanitizeTokenColors } from "./terminalPalette";
 
 const OPEN_VSX_SEARCH_URL = "https://open-vsx.org/api/-/search";
 const MAX_VSIX_BYTES = 20 * 1024 * 1024;
@@ -335,7 +336,7 @@ function sanitizeThemeObject(value: Record<string, unknown>): Record<string, unk
   if (isRecord(value.colors)) {
     for (const [key, color] of Object.entries(value.colors)) {
       if (
-        USED_WORKBENCH_COLORS.has(key) &&
+        (USED_WORKBENCH_COLORS.has(key) || isTerminalAnsiColorKey(key)) &&
         typeof color === "string" &&
         color.length <= MAX_COLOR_VALUE_LENGTH
       ) {
@@ -343,9 +344,11 @@ function sanitizeThemeObject(value: Record<string, unknown>): Record<string, unk
       }
     }
   }
+  const tokenColors = sanitizeTokenColors(value.tokenColors);
   return {
     ...(typeof value.include === "string" ? { include: value.include } : {}),
     colors,
+    ...(tokenColors ? { tokenColors } : {}),
   };
 }
 
@@ -567,6 +570,10 @@ async function loadThemeObject(
       ...(isRecord(base.colors) ? base.colors : {}),
       ...(isRecord(value.colors) ? value.colors : {}),
     },
+    tokenColors: [
+      ...(Array.isArray(base.tokenColors) ? base.tokenColors : []),
+      ...(Array.isArray(value.tokenColors) ? value.tokenColors : []),
+    ],
   };
   cache.set(path, resolved);
   return resolved;

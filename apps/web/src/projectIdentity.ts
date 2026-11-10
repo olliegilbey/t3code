@@ -1,4 +1,5 @@
 import { PROJECT_ICON_COLORS } from "./projectIconColors";
+import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
 import type { ProjectIconColor } from "@t3tools/contracts";
 
 export interface ProjectIdentity {
@@ -38,4 +39,12 @@ export function deriveProjectIdentity(projectName: string): ProjectIdentity {
     monogram: projectMonogram(projectName),
     color: projectColor(projectName),
   };
+}
+
+/** The color the project's icon shows: the one the user picked, else its monogram's. */
+export function resolveProjectColor(
+  project: Pick<EnvironmentProject, "title" | "projectIcon">,
+): ProjectIconColor {
+  const icon = project.projectIcon;
+  return (icon && "color" in icon ? icon.color : undefined) ?? projectColor(project.title);
 }
