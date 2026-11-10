@@ -22,6 +22,12 @@ import {
 import { useCustomThemes } from "../../hooks/useCustomThemes";
 import { useEnvironmentIdentificationMode } from "../../hooks/useSettings";
 import { useTheme } from "../../hooks/useTheme";
+import {
+  setTerminalModeEnabled,
+  setVimKeysEnabled,
+  useTerminalMode,
+  useVimKeysSetting,
+} from "../../terminalMode";
 import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
@@ -361,6 +367,8 @@ export function AppearanceSettingsPanel() {
             />
           }
         />
+        <TerminalModeRow />
+        <VimKeysRow />
         <AdvancedSettings
           targetIds={[
             searchableSetting("panel-animations").id,
@@ -497,5 +505,65 @@ export function AppearanceSettingsPanel() {
 
       <TypographySection />
     </SettingsPageContainer>
+  );
+}
+
+function TerminalModeRow() {
+  const gt = useGT();
+  const terminalMode = useTerminalMode();
+  const searchableSetting = useSearchableSetting();
+  return (
+    <SettingsRow
+      {...searchableSetting("terminal-mode")}
+      description={gt(
+        "Monospace chat, prompt-style messages, your theme's terminal and syntax colors, indented work logs, and the diff panel open on new threads. Messages use the prompt font size, tool lines the code size.",
+      )}
+      resetAction={
+        terminalMode ? (
+          <SettingResetButton
+            ariaLabel={gt("Reset terminal mode to default")}
+            onClick={() => setTerminalModeEnabled(false)}
+          />
+        ) : null
+      }
+      control={
+        <Switch
+          checked={terminalMode}
+          onCheckedChange={(checked) => setTerminalModeEnabled(Boolean(checked))}
+          aria-label={gt("Terminal mode")}
+        />
+      }
+    />
+  );
+}
+
+function VimKeysRow() {
+  const gt = useGT();
+  const terminalMode = useTerminalMode();
+  const vimKeys = useVimKeysSetting();
+  const searchableSetting = useSearchableSetting();
+  if (!terminalMode) return null;
+  return (
+    <SettingsRow
+      {...searchableSetting("vim-keys")}
+      description={gt(
+        "Edit messages with vim's insert and normal modes. Esc enters normal mode, which has hjkl, w b e, 0 ^ $, gg G, i a o, x, dd, cw, D, C and u. Enter still sends.",
+      )}
+      resetAction={
+        vimKeys ? (
+          <SettingResetButton
+            ariaLabel={gt("Reset vim keys to default")}
+            onClick={() => setVimKeysEnabled(false)}
+          />
+        ) : null
+      }
+      control={
+        <Switch
+          checked={vimKeys}
+          onCheckedChange={(checked) => setVimKeysEnabled(Boolean(checked))}
+          aria-label={gt("Vim keys")}
+        />
+      }
+    />
   );
 }
