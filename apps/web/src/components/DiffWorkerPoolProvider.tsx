@@ -6,10 +6,11 @@ import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react
 import { getRenderedAppearance, subscribeRenderedAppearance } from "../hooks/useTheme";
 import { resolveDiffThemeName } from "../lib/diffRendering";
 import { PREFERRED_HIGHLIGHTER } from "../lib/syntaxHighlighting";
+import { subscribeTerminalMode } from "../terminalMode";
 
 export class DiffWorkerError extends Schema.TaggedError<DiffWorkerError>()("DiffWorkerError", {
   operation: Schema.Literals(["create-worker", "get-render-options", "set-render-options"]),
-  themeName: Schema.Literals(["pierre-dark", "t3-light"]),
+  themeName: Schema.Literals(["pierre-dark", "t3-light", "t3-terminal"]),
   cause: Schema.Defect(),
 }) {
   override get message(): string {
@@ -70,9 +71,14 @@ function createDiffWorkerPool(poolSize: number) {
       useTokenTransformer: true,
     },
   );
+  const unsubscribeAppearance = subscribeRenderedAppearance(() => applyDiffWorkerTheme(pool));
+  const unsubscribeTerminalMode = subscribeTerminalMode(() => applyDiffWorkerTheme(pool));
   return {
     pool,
-    unsubscribeTheme: subscribeRenderedAppearance(() => applyDiffWorkerTheme(pool)),
+    unsubscribeTheme: () => {
+      unsubscribeAppearance();
+      unsubscribeTerminalMode();
+    },
     consumers: 0,
     idleTimer: undefined,
   };

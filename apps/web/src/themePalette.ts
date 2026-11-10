@@ -32,6 +32,7 @@ import {
 import { appAtomRegistry, subscribeAtomChanges } from "./rpc/atomRegistry";
 import { applyThemeBackground } from "./themeBackground";
 import { applyThemeCss } from "./themeCss";
+import { applyTerminalPalette } from "./terminalPalette";
 import { themeServerEnvironmentThemesAtom } from "./state/server";
 
 export { EMBER_THEME, GROVE_THEME, IRIS_THEME, OCEAN_THEME, T3_CHAT_THEME, THEME_COLOR_ROLES };
@@ -1670,6 +1671,7 @@ export function applyThemeColorPreview(
   }
   applyContextChipVariables(root, colors);
   applyThemeCss(css);
+  applyTerminalPalette(root, colors);
   setThemePreviewAppearance(appearance);
 }
 
@@ -1692,10 +1694,12 @@ export function applyThemePalette(theme: ThemePreference, appearance?: ThemeAppe
       root.style.setProperty(APP_THEME_VARIABLES[role], value);
     }
     applyContextChipVariables(root, colors);
+    applyTerminalPalette(root, colors);
     return;
   }
 
   delete root.dataset.themeId;
+  applyTerminalPalette(root, null);
   for (const variable of Object.values(APP_THEME_VARIABLES)) {
     root.style.removeProperty(variable);
   }

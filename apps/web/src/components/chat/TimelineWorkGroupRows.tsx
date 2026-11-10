@@ -62,6 +62,7 @@ import {
   workEntryIconName,
 } from "./TimelineWorkEntryRow.logic";
 import { formatWorkingTimerNow } from "./TimelineWorkGroupRows.logic";
+import { useTerminalMode } from "../../terminalMode";
 
 export const WorkGroupSection = memo(function WorkGroupSection({
   anchorKey,
@@ -569,6 +570,7 @@ export function LiveWorkEntryTimelineRow({
   const threadTarget = useThreadReadTarget(row.entry, ctx.activeThreadEnvironmentId);
   const label = liveWorkEntryLabel(row.entry, ctx.workspaceRoot, row.active);
   const threadLabel = threadReadLabel(label, threadTarget);
+  const terminalMode = useTerminalMode();
 
   const item = row.entry.projectedItem?.item;
   const pendingApproval =
@@ -576,8 +578,12 @@ export function LiveWorkEntryTimelineRow({
   if (pendingApproval) return <TimelinePendingApprovalRow approval={pendingApproval} />;
 
   const failed = workEntryDisplayIndicatesToolFailure(row.entry);
+  // Terminal mode opens a group with tools, and its thoughts show only as labels. The
+  // latest thought still previews here, as it does when the group is closed.
+  const openByDefault =
+    terminalMode && row.groupedEntries.some((entry) => entry.itemType !== "reasoning");
   const thoughtLine =
-    row.thought && !row.expanded
+    row.thought && (!row.expanded || openByDefault)
       ? liveThoughtLine((row.thought.detail ?? "").slice(0, THOUGHT_PREVIEW_SOURCE_MAX_LENGTH))
       : "";
   const thoughtIsStatus = thoughtLine !== "" && row.entry === row.thought;

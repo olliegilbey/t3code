@@ -14,6 +14,7 @@ import {
   type ThemeColorRole,
   type ThemeDefinition,
 } from "./themePalette";
+import { extractTerminalPalette, rememberTerminalPalette } from "./terminalPalette";
 
 type VsCodeRgba = { r: number; g: number; b: number; a: number };
 type VsCodeRgb = { r: number; g: number; b: number };
@@ -375,13 +376,15 @@ export function parseVsCodeThemeFile(value: unknown): ThemeDefinition {
 
   const name = resolveName(value);
   const generatedId = themeIdFromName(name);
-  return parseThemeFile({
+  const theme = parseThemeFile({
     version: THEME_FILE_VERSION,
     ...(isReservedThemeId(generatedId) ? { id: `${generatedId}-vscode` } : {}),
     name,
     appearance,
     colors: { ...derived, ...overrides },
   });
+  rememberTerminalPalette(theme.colors, extractTerminalPalette(value));
+  return theme;
 }
 
 export function pairVsCodeThemes(
