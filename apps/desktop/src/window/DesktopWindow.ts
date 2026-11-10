@@ -422,7 +422,10 @@ export const make = Effect.gen(function* () {
       minHeight: DesktopAppSettings.MIN_MAIN_WINDOW_SIZE.height,
       show: false,
       autoHideMenuBar: true,
-      ...(environment.platform === "darwin" ? { disableAutoHideCursor: true } : {}),
+      // acceptFirstMouse: the click that activates the window also reaches the page.
+      ...(environment.platform === "darwin"
+        ? { disableAutoHideCursor: true, acceptFirstMouse: true }
+        : {}),
       backgroundColor: getInitialWindowBackgroundColor(shouldUseDarkColors),
       ...iconOption,
       title: environment.displayName,
