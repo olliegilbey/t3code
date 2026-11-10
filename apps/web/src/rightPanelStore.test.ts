@@ -477,13 +477,16 @@ describe("rightPanelStore", () => {
     ).toBe("file");
   });
 
-  it("does not treat resource reconciliation as a manual choice", () => {
+  it("does not treat resource reconciliation or an automatic open as a manual choice", () => {
     const store = useRightPanelStore.getState();
     store.openFile(refA, "src/app.ts");
     const revision = store.getUserActionRevision(refA);
     store.reconcileBrowserSurfaces(refA, ["agent-browser"]);
     store.reconcileFileSurfaces(refA, false);
+    store.open(refA, "preview", true);
 
+    expect(selectActiveRightPanel(useRightPanelStore.getState().byThreadKey, refA)).toBe("preview");
+    expect(store.getUserActionRevision(refA)).toBe(revision);
     expect(store.openProactive(refA, completedDiff, revision)).toBe(true);
     expect(selectActiveRightPanel(useRightPanelStore.getState().byThreadKey, refA)).toBe("diff");
   });
