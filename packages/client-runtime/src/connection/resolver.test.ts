@@ -126,6 +126,7 @@ const makeDependencies = Effect.fn("TestConnectionResolver.makeDependencies")((o
           bearerToken: "ssh-bearer",
         })),
     disconnect: () => Effect.void,
+    cancelSetup: () => Effect.void,
   });
 
   const layerDependencies = Layer.mergeAll(
