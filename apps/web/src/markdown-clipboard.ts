@@ -462,3 +462,12 @@ export function chatMarkdownClipboardPayload(
   if (texts.length === 0) return null;
   return { text: texts.join("\n\n"), html: htmls.join("") };
 }
+
+/** All of a rendered block's content, as selecting it would copy it. */
+export function renderedMarkdownClipboardPayload(element: Element): MarkdownClipboardPayload {
+  const container = document.createElement("div");
+  for (const child of element.childNodes) container.appendChild(child.cloneNode(true));
+  // The sanitizer prunes the container, so serialize the text first.
+  const text = serializeRenderedMarkdownFragment(container);
+  return { text, html: sanitizedHtmlFrom(container) };
+}

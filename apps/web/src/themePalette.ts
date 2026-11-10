@@ -30,6 +30,7 @@ import {
 } from "./lib/contextChipAccents";
 
 import { appAtomRegistry, subscribeAtomChanges } from "./rpc/atomRegistry";
+import { applyTerminalPalette } from "./terminalPalette";
 import { themeServerEnvironmentThemesAtom } from "./state/server";
 
 export { EMBER_THEME, GROVE_THEME, IRIS_THEME, OCEAN_THEME, T3_CHAT_THEME, THEME_COLOR_ROLES };
@@ -1623,6 +1624,7 @@ export function applyThemeColorPreview(colors: ThemeColors, appearance: ThemeApp
     if (isThemeColor(value)) root.style.setProperty(APP_THEME_VARIABLES[role], value);
   }
   applyContextChipVariables(root, colors);
+  applyTerminalPalette(root, colors);
   setThemePreviewAppearance(appearance);
 }
 
@@ -1643,10 +1645,12 @@ export function applyThemePalette(theme: ThemePreference, appearance?: ThemeAppe
       root.style.setProperty(APP_THEME_VARIABLES[role], value);
     }
     applyContextChipVariables(root, colors);
+    applyTerminalPalette(root, colors);
     return;
   }
 
   delete root.dataset.themeId;
+  applyTerminalPalette(root, null);
   for (const variable of Object.values(APP_THEME_VARIABLES)) {
     root.style.removeProperty(variable);
   }

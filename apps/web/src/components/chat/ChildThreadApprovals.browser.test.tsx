@@ -5,6 +5,7 @@ import { AsyncResult, Atom } from "effect/reactivity";
 import { expect, it, vi } from "vite-plus/test";
 
 import { render } from "../../../test/render";
+import { setTerminalModeEnabled } from "../../terminalMode";
 
 const state = vi.hoisted(() => ({ respond: vi.fn(), approvalsAtom: null as unknown }));
 
@@ -49,4 +50,14 @@ it("shows a failed decision and clears the error when the user retries", async (
   await expect.element(screen.getByRole("alert")).toHaveTextContent("Child environment offline");
   await screen.getByRole("button", { name: "Approve", exact: true }).click();
   await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
+});
+
+it("leaves a subagent's request to Terminal mode's prompt", async () => {
+  const thread = setup();
+  setTerminalModeEnabled(true);
+  using _terminal = { [Symbol.dispose]: () => setTerminalModeEnabled(false) };
+  await using screen = await render(<ChildThreadApprovals threadRef={thread} />);
+  await expect
+    .element(screen.getByRole("region", { name: "Approval from Compile task" }))
+    .not.toBeInTheDocument();
 });

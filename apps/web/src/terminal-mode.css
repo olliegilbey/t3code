@@ -1,0 +1,827 @@
+/* Terminal mode (Settings → Appearance). Everything here is scoped to
+   html[data-terminal-mode] and stays unlayered, so it outranks Tailwind's layers.
+
+   Colors follow the active theme. VS Code themes contribute their ANSI and
+   syntax colors as --t3-ansi-* and --t3-theme-syntax-* (see terminalPalette.ts);
+   themes without them fall back to the neutral palettes below. */
+
+html[data-terminal-mode] {
+  --term-black: var(--t3-ansi-black, oklch(0.35 0.01 260));
+  --term-red: var(--t3-ansi-red, oklch(0.53 0.19 25));
+  --term-green: var(--t3-ansi-green, oklch(0.52 0.14 145));
+  --term-yellow: var(--t3-ansi-yellow, oklch(0.58 0.13 80));
+  --term-blue: var(--t3-ansi-blue, oklch(0.5 0.15 255));
+  --term-magenta: var(--t3-ansi-magenta, oklch(0.5 0.18 320));
+  --term-cyan: var(--t3-ansi-cyan, oklch(0.53 0.1 205));
+  --term-white: var(--t3-ansi-white, oklch(0.75 0.01 260));
+  --term-bright-black: var(--t3-ansi-bright-black, oklch(0.55 0.01 260));
+  --term-bright-red: var(--t3-ansi-bright-red, oklch(0.6 0.2 25));
+  --term-bright-green: var(--t3-ansi-bright-green, oklch(0.6 0.15 145));
+  --term-bright-yellow: var(--t3-ansi-bright-yellow, oklch(0.65 0.14 80));
+  --term-bright-blue: var(--t3-ansi-bright-blue, oklch(0.58 0.15 255));
+  --term-bright-magenta: var(--t3-ansi-bright-magenta, oklch(0.58 0.18 320));
+  --term-bright-cyan: var(--t3-ansi-bright-cyan, oklch(0.6 0.1 205));
+  --term-bright-white: var(--t3-ansi-bright-white, oklch(0.9 0.01 260));
+
+  /* Code theme `t3-terminal` (lib/terminalSyntaxTheme.ts) reads these. */
+  /* Plain code text is the theme's own text color, as in its editor. */
+  --t3-syntax-foreground: var(--foreground);
+  --t3-syntax-background: transparent;
+  --t3-syntax-token-comment: var(--t3-theme-syntax-comment, var(--term-bright-black));
+  --t3-syntax-token-keyword: var(--t3-theme-syntax-keyword, var(--term-magenta));
+  --t3-syntax-token-operator: var(--t3-theme-syntax-operator, var(--t3-syntax-token-keyword));
+  --t3-syntax-token-string-expression: var(--t3-theme-syntax-string-expression, var(--term-green));
+  --t3-syntax-token-string: var(--t3-theme-syntax-string, var(--term-green));
+  --t3-syntax-token-string-escape: var(
+    --t3-theme-syntax-string-escape,
+    var(--t3-syntax-token-constant)
+  );
+  --t3-syntax-token-constant: var(--t3-theme-syntax-constant, var(--term-yellow));
+  --t3-syntax-token-number: var(--t3-theme-syntax-number, var(--t3-syntax-token-constant));
+  --t3-syntax-token-boolean: var(--t3-theme-syntax-boolean, var(--t3-syntax-token-constant));
+  --t3-syntax-token-parameter: var(--t3-theme-syntax-parameter, var(--t3-syntax-foreground));
+  --t3-syntax-token-variable: var(--t3-theme-syntax-variable, var(--t3-syntax-foreground));
+  --t3-syntax-token-variable-special: var(
+    --t3-theme-syntax-variable-special,
+    var(--t3-syntax-token-constant)
+  );
+  --t3-syntax-token-property: var(--t3-theme-syntax-property, var(--t3-syntax-token-constant));
+  --t3-syntax-token-function: var(--t3-theme-syntax-function, var(--term-blue));
+  --t3-syntax-token-type: var(--t3-theme-syntax-type, var(--t3-syntax-token-function));
+  --t3-syntax-token-namespace: var(--t3-theme-syntax-namespace, var(--t3-syntax-token-type));
+  --t3-syntax-token-attribute: var(--t3-theme-syntax-attribute, var(--t3-syntax-token-function));
+  --t3-syntax-token-tag: var(--t3-theme-syntax-tag, var(--t3-syntax-token-string-expression));
+  --t3-syntax-token-punctuation: var(--t3-theme-syntax-punctuation, var(--term-bright-black));
+  --t3-syntax-token-link: var(--t3-theme-syntax-link, var(--term-cyan));
+  --t3-syntax-token-inserted: var(--t3-theme-syntax-inserted, var(--term-green));
+  --t3-syntax-token-deleted: var(--t3-theme-syntax-deleted, var(--term-red));
+  --t3-syntax-ansi-black: var(--term-black);
+  --t3-syntax-ansi-red: var(--term-red);
+  --t3-syntax-ansi-green: var(--term-green);
+  --t3-syntax-ansi-yellow: var(--term-yellow);
+  --t3-syntax-ansi-blue: var(--term-blue);
+  --t3-syntax-ansi-magenta: var(--term-magenta);
+  --t3-syntax-ansi-cyan: var(--term-cyan);
+  --t3-syntax-ansi-white: var(--term-white);
+  --t3-syntax-ansi-bright-black: var(--term-bright-black);
+  --t3-syntax-ansi-bright-red: var(--term-bright-red);
+  --t3-syntax-ansi-bright-green: var(--term-bright-green);
+  --t3-syntax-ansi-bright-yellow: var(--term-bright-yellow);
+  --t3-syntax-ansi-bright-blue: var(--term-bright-blue);
+  --t3-syntax-ansi-bright-magenta: var(--term-bright-magenta);
+  --t3-syntax-ansi-bright-cyan: var(--term-bright-cyan);
+  --t3-syntax-ansi-bright-white: var(--term-bright-white);
+
+  /* Status colors that are fixed Tailwind hues elsewhere follow the theme here. */
+  --info-foreground: var(--term-blue);
+  --success-foreground: var(--term-green);
+
+  --radius: 0.125rem;
+  /* Buttons, menu triggers and sidebar rows take their own radius; they square off too. */
+  --control-radius: var(--radius);
+}
+
+html.dark[data-terminal-mode] {
+  --term-black: var(--t3-ansi-black, oklch(0.3 0.01 260));
+  --term-red: var(--t3-ansi-red, oklch(0.7 0.16 22));
+  --term-green: var(--t3-ansi-green, oklch(0.76 0.14 145));
+  --term-yellow: var(--t3-ansi-yellow, oklch(0.83 0.12 85));
+  --term-blue: var(--t3-ansi-blue, oklch(0.72 0.12 250));
+  --term-magenta: var(--t3-ansi-magenta, oklch(0.72 0.14 320));
+  --term-cyan: var(--t3-ansi-cyan, oklch(0.78 0.1 200));
+  --term-white: var(--t3-ansi-white, oklch(0.85 0.01 260));
+  --term-bright-black: var(--t3-ansi-bright-black, oklch(0.6 0.01 260));
+  --term-bright-red: var(--t3-ansi-bright-red, oklch(0.76 0.16 22));
+  --term-bright-green: var(--t3-ansi-bright-green, oklch(0.82 0.14 145));
+  --term-bright-yellow: var(--t3-ansi-bright-yellow, oklch(0.88 0.12 85));
+  --term-bright-blue: var(--t3-ansi-bright-blue, oklch(0.78 0.12 250));
+  --term-bright-magenta: var(--t3-ansi-bright-magenta, oklch(0.78 0.14 320));
+  --term-bright-cyan: var(--t3-ansi-bright-cyan, oklch(0.84 0.1 200));
+  --term-bright-white: var(--t3-ansi-bright-white, oklch(0.96 0.01 260));
+}
+
+/* Monospace everywhere. The font settings set --font-sans on <html>, so it is redefined
+   one level down to keep the user's code font choice. */
+html[data-terminal-mode] body {
+  --font-sans: var(--font-mono);
+  --font-composer: var(--font-mono);
+  font-family: var(--font-mono);
+}
+
+/* ── Markdown ─────────────────────────────────────────────────────────── */
+
+html[data-terminal-mode] :is(.chat-markdown, .composer-tiptap) :is(h1, h2, h3, h4, h5, h6) {
+  font-size: 1em;
+  font-weight: 700;
+}
+
+html[data-terminal-mode] :is(.chat-markdown, .composer-tiptap) h1 {
+  color: var(--term-magenta);
+}
+html[data-terminal-mode] :is(.chat-markdown, .composer-tiptap) h2 {
+  color: var(--term-blue);
+}
+html[data-terminal-mode] :is(.chat-markdown, .composer-tiptap) h3 {
+  color: var(--term-cyan);
+}
+html[data-terminal-mode] :is(.chat-markdown, .composer-tiptap) h4 {
+  color: var(--term-green);
+}
+html[data-terminal-mode] :is(.chat-markdown, .composer-tiptap) h5 {
+  color: var(--term-yellow);
+}
+html[data-terminal-mode] :is(.chat-markdown, .composer-tiptap) h6 {
+  color: var(--term-bright-black);
+}
+
+/* Source-style markers. Chat only: pseudo-content inside the editor confuses the caret. */
+html[data-terminal-mode] .chat-markdown :is(h1, h2, h3, h4, h5, h6)::before {
+  color: color-mix(in oklab, currentcolor 55%, transparent);
+  font-weight: 400;
+}
+html[data-terminal-mode] .chat-markdown h1::before {
+  content: "# ";
+}
+html[data-terminal-mode] .chat-markdown h2::before {
+  content: "## ";
+}
+html[data-terminal-mode] .chat-markdown h3::before {
+  content: "### ";
+}
+html[data-terminal-mode] .chat-markdown h4::before {
+  content: "#### ";
+}
+html[data-terminal-mode] .chat-markdown h5::before {
+  content: "##### ";
+}
+html[data-terminal-mode] .chat-markdown h6::before {
+  content: "###### ";
+}
+
+html[data-terminal-mode] :is(.chat-markdown, .composer-tiptap) strong {
+  color: var(--term-yellow);
+  font-weight: 700;
+}
+
+html[data-terminal-mode] :is(.chat-markdown, .composer-tiptap) em {
+  color: var(--term-bright-magenta);
+}
+
+html[data-terminal-mode] .chat-markdown :not(pre) > code {
+  border-color: transparent;
+  border-radius: 0;
+  background: color-mix(in oklab, var(--t3-syntax-token-string) 12%, transparent);
+  color: var(--t3-syntax-token-string);
+  font-size: 0.95em;
+}
+
+html[data-terminal-mode]
+  .chat-markdown
+  a:not(.chat-markdown-file-link, :has([data-slot="context-chip-label"])) {
+  color: var(--term-blue);
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}
+
+html[data-terminal-mode] :is(.chat-markdown, .composer-tiptap) ul {
+  list-style-type: "- ";
+}
+
+html[data-terminal-mode] :is(.chat-markdown, .composer-tiptap) li::marker {
+  color: var(--term-cyan);
+}
+
+html[data-terminal-mode] :is(.chat-markdown, .composer-tiptap) ol > li::marker {
+  color: var(--term-yellow);
+}
+
+html[data-terminal-mode] :is(.chat-markdown, .composer-tiptap) blockquote {
+  border-inline-start-color: var(--term-bright-black);
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+html[data-terminal-mode] .chat-markdown hr {
+  border-top: 1px dashed var(--term-bright-black);
+}
+
+html[data-terminal-mode] .chat-markdown thead th {
+  color: var(--term-blue);
+}
+
+html[data-terminal-mode] :is(.chat-markdown, .composer-tiptap) .chat-markdown-codeblock {
+  border-color: color-mix(in oklab, var(--term-bright-black) 45%, transparent);
+  border-radius: 0;
+}
+
+html[data-terminal-mode] :is(.chat-markdown, .composer-tiptap) .chat-markdown-codeblock-header {
+  color: var(--term-bright-black);
+}
+
+/* ── Your messages: a prompt line instead of a chat bubble ─────────────── */
+
+/* It keeps the chat layout's place on the right, so the two voices stay apart. */
+html[data-terminal-mode] [data-user-message-bubble] {
+  border-radius: 0;
+  border-inline-start: 2px solid var(--term-green);
+  background: color-mix(in oklab, var(--term-green) 7%, transparent);
+  padding: 0.5rem 0.75rem;
+}
+
+html[data-terminal-mode] [data-user-message-bubble] [data-user-message-body] {
+  display: flex;
+  gap: 1ch;
+}
+
+html[data-terminal-mode] [data-user-message-bubble] [data-user-message-body]::before {
+  content: "❯";
+  flex: none;
+  color: var(--term-green);
+  font-weight: 700;
+}
+
+/* ── Work log: color each kind of step like a shell transcript ─────────── */
+
+/* Tool lines sit indented at the code size; conversation text takes the prompt size.
+   Both sizes are set in Settings → Appearance. */
+html[data-terminal-mode] [data-timeline-row-kind="message"] .chat-markdown {
+  font-size: var(--font-size-prompt, 0.875rem);
+}
+html[data-terminal-mode]
+  :is(
+    [data-timeline-row-kind="work"],
+    [data-timeline-row-kind="work-live"],
+    [data-timeline-row-kind="work-toggle"],
+    [data-timeline-row-kind="thinking"]
+  ) {
+  /* The end keeps room for a long tool group's scrollbar. */
+  padding-inline: 2ch var(--app-scrollbar-width);
+  font-size: var(--font-size-code, 0.8125rem);
+
+  & .text-sm {
+    font-size: inherit;
+  }
+}
+
+/* A block of tool lines sits well apart from the prose around it. Prose already
+   leaves a line below itself, so the block adds less above. */
+html[data-terminal-mode]
+  :is([data-timeline-row-kind="work"], [data-timeline-row-kind="work-live"]) {
+  padding-block: 0.5rem 1.75rem;
+
+  /* A faint gutter marks tool lines as log output, apart from the agent's words.
+     It hugs the lines; the row's padding spaces the block. */
+  & > div {
+    padding-block-end: 0;
+    padding-inline-start: 1ch;
+    border-inline-start: 1px solid color-mix(in oklab, var(--term-bright-black) 75%, transparent);
+  }
+}
+
+/* Every time sits in one column at the right, like a shell's right prompt. Tool lines
+   end in an expand arrow and scrollbar room, so other rows leave that space. */
+html[data-terminal-mode] [data-timeline-timestamp] {
+  margin-inline: auto calc(1.375rem + var(--app-scrollbar-width));
+}
+html[data-terminal-mode]
+  :is(
+    [data-timeline-row-kind="work"],
+    [data-timeline-row-kind="work-live"],
+    [data-timeline-row-kind="work-toggle"],
+    [data-timeline-row-kind="thinking"]
+  )
+  [data-timeline-timestamp] {
+  margin-inline-end: 1.375rem;
+}
+/* Messages have 2px more inset. Yours put the time after their buttons. */
+html[data-terminal-mode] [data-timeline-row-kind="message"] [data-timeline-timestamp] {
+  margin-inline-end: calc(1.25rem + var(--app-scrollbar-width));
+}
+html[data-terminal-mode] [data-message-role="user"] [data-timeline-timestamp] {
+  order: 1;
+}
+html[data-terminal-mode] [data-timeline-timestamp]:has(+ [aria-hidden]) {
+  margin-inline-end: 0;
+}
+/* Under a turn's last message, copy, fork and time sit together in the time column.
+   Their row is the only space below the message. */
+html[data-terminal-mode]
+  :is([data-message-role="assistant"], [data-timeline-row-kind="assistant-meta"]).pb-4 {
+  padding-bottom: 0;
+}
+html[data-terminal-mode] [data-assistant-meta] {
+  justify-content: flex-end;
+  margin-top: 0;
+
+  & [data-timeline-timestamp] {
+    margin-inline-start: 0;
+  }
+}
+/* A long tool group's own scrollbar takes the room kept for it, so its lines line up too. */
+html[data-terminal-mode] [data-tool-group-scroll] {
+  margin-inline-end: calc(-1 * var(--app-scrollbar-width));
+}
+
+/* Tool lines step back, so the agent's own words stand out between them. */
+html[data-terminal-mode]
+  :is(
+    [data-timeline-row-kind="work"],
+    [data-timeline-row-kind="work-live"],
+    [data-timeline-row-kind="work-toggle"],
+    [data-timeline-row-kind="thinking"]
+  ) {
+  opacity: 0.8;
+}
+
+html[data-terminal-mode] [data-v2-item-type] > div:first-child .text-secondary-label,
+html[data-terminal-mode] [data-v2-item-type] > div:first-child svg {
+  color: var(--work-kind-color, var(--muted-foreground));
+}
+
+html[data-terminal-mode] [data-v2-item-type="command_execution"] {
+  --work-kind-color: var(--term-yellow);
+}
+html[data-terminal-mode] [data-v2-item-type="file_change"] {
+  --work-kind-color: var(--term-blue);
+}
+html[data-terminal-mode] [data-v2-item-type="reasoning"] {
+  --work-kind-color: var(--term-bright-black);
+  font-style: italic;
+}
+html[data-terminal-mode] [data-v2-item-type="dynamic_tool"],
+html[data-terminal-mode] [data-v2-item-type="file_search"],
+html[data-terminal-mode] [data-v2-item-type="web_search"] {
+  --work-kind-color: var(--term-cyan);
+}
+html[data-terminal-mode] [data-v2-item-type="mcp_tool_call"] {
+  --work-kind-color: var(--term-magenta);
+}
+html[data-terminal-mode] [data-v2-item-type="error"] {
+  --work-kind-color: var(--term-red);
+}
+
+/* A command reads like a shell line: its icon keeps the kind color, its words take
+   the theme's syntax colors (ShellCommandText tags them). */
+html[data-terminal-mode]
+  [data-v2-item-type="command_execution"]
+  > div:first-child
+  .text-secondary-label {
+  color: var(--t3-syntax-foreground);
+}
+/* A command's icon shows how it ended: green once it succeeds, red when it fails.
+   It stays yellow while it runs. */
+html[data-terminal-mode] [data-v2-item-type="command_execution"] {
+  &[data-tool-status="completed"] {
+    --work-kind-color: var(--term-green);
+  }
+  &:is([data-tool-status="failed"], [data-tool-status="declined"]) {
+    --work-kind-color: var(--term-red);
+  }
+}
+html[data-terminal-mode] [data-shell-token] {
+  &[data-shell-token="command"] {
+    color: var(--t3-syntax-token-function);
+  }
+  &:is([data-shell-token="keyword"], [data-shell-token="operator"]) {
+    color: var(--t3-syntax-token-keyword);
+  }
+  &[data-shell-token="flag"] {
+    color: var(--t3-syntax-token-constant);
+  }
+  &[data-shell-token="string"] {
+    color: var(--t3-syntax-token-string);
+  }
+  &[data-shell-token="variable"] {
+    color: var(--term-cyan);
+  }
+  &[data-shell-token="comment"] {
+    color: var(--t3-syntax-token-comment);
+    font-style: italic;
+  }
+}
+
+/* The "Worked for …" fold reads as a separator line. */
+html[data-terminal-mode] [data-timeline-row-kind="turn-fold"] > div {
+  border-bottom-style: dashed;
+  border-bottom-color: color-mix(in oklab, var(--term-bright-black) 50%, transparent);
+}
+
+/* ── Sidebar: project names in their project color, titles in their status color ── */
+
+html[data-terminal-mode] [data-project-color] {
+  color: var(--project-color, inherit);
+  font-weight: 500;
+  /* Slim rows dim and desaturate project icons until hover. */
+  filter: none;
+  opacity: 1;
+}
+
+/* Eighteen project colors from sixteen ANSI slots: in-between hues mix their neighbors. */
+html[data-terminal-mode] [data-project-color="gray"] {
+  --project-color: var(--term-bright-black);
+}
+html[data-terminal-mode] [data-project-color="red"] {
+  --project-color: var(--term-red);
+}
+html[data-terminal-mode] [data-project-color="rose"] {
+  --project-color: var(--term-bright-red);
+}
+html[data-terminal-mode] [data-project-color="orange"] {
+  --project-color: color-mix(in oklab, var(--term-red), var(--term-yellow));
+}
+html[data-terminal-mode] [data-project-color="amber"] {
+  --project-color: var(--term-yellow);
+}
+html[data-terminal-mode] [data-project-color="yellow"] {
+  --project-color: var(--term-bright-yellow);
+}
+html[data-terminal-mode] [data-project-color="lime"] {
+  --project-color: color-mix(in oklab, var(--term-green), var(--term-yellow));
+}
+html[data-terminal-mode] [data-project-color="green"] {
+  --project-color: var(--term-green);
+}
+html[data-terminal-mode] [data-project-color="emerald"] {
+  --project-color: var(--term-bright-green);
+}
+html[data-terminal-mode] [data-project-color="teal"] {
+  --project-color: color-mix(in oklab, var(--term-green), var(--term-cyan));
+}
+html[data-terminal-mode] [data-project-color="cyan"] {
+  --project-color: var(--term-cyan);
+}
+html[data-terminal-mode] [data-project-color="sky"] {
+  --project-color: var(--term-bright-cyan);
+}
+html[data-terminal-mode] [data-project-color="blue"] {
+  --project-color: var(--term-blue);
+}
+html[data-terminal-mode] [data-project-color="indigo"] {
+  --project-color: var(--term-bright-blue);
+}
+html[data-terminal-mode] [data-project-color="violet"] {
+  --project-color: color-mix(in oklab, var(--term-blue), var(--term-magenta));
+}
+html[data-terminal-mode] [data-project-color="purple"] {
+  --project-color: var(--term-magenta);
+}
+html[data-terminal-mode] [data-project-color="fuchsia"] {
+  --project-color: var(--term-bright-magenta);
+}
+html[data-terminal-mode] [data-project-color="pink"] {
+  --project-color: color-mix(in oklab, var(--term-magenta), var(--term-red));
+}
+
+html[data-terminal-mode] [data-thread-status="working"] {
+  color: var(--info-foreground);
+}
+html[data-terminal-mode] [data-thread-status="done"] {
+  color: var(--success-foreground);
+}
+html[data-terminal-mode] [data-thread-status="failed"] {
+  color: var(--error-foreground);
+}
+html[data-terminal-mode]
+  :is(
+    [data-thread-status="approval"],
+    [data-thread-status="limited"],
+    [data-thread-status="woke"]
+  ) {
+  color: var(--warning-foreground);
+}
+html[data-terminal-mode] [data-thread-status="input"] {
+  color: var(--term-magenta);
+}
+html[data-terminal-mode] [data-thread-status="request"] {
+  color: var(--guest-foreground);
+}
+html[data-terminal-mode] [data-thread-status="waiting"] {
+  color: var(--muted-foreground);
+}
+
+/* ── Chrome: square surfaces, a prompt-line composer, vim-style folds ── */
+
+/* One panel surface for the composer and every popover, menu, tooltip and toast.
+   Mirrors the composer's own per-theme values (ComposerSurface.tsx), hoisted to the
+   root so portaled popovers can read them. */
+html[data-terminal-mode] {
+  --term-panel: var(--card);
+  --term-panel-outline: rgb(0 0 0 / 8%);
+
+  &.dark {
+    --term-panel: var(--surface-raised);
+    --term-panel-outline: color-mix(in srgb, var(--color-white) 5%, transparent);
+  }
+  &[data-theme-id] {
+    --term-panel: var(--app-theme-surface-raised);
+    --term-panel-outline: var(--app-theme-toolbar-border);
+  }
+  &.dark[data-theme-id] {
+    --term-panel-outline: color-mix(in srgb, var(--app-theme-input) 30%, var(--background));
+  }
+}
+html[data-terminal-mode] [data-slot="composer-shell"] {
+  --chat-composer-glass-surface: var(--term-panel);
+  --chat-composer-outline: var(--term-panel-outline);
+}
+/* Dialogs and the command palette square off like menus. */
+html[data-terminal-mode] .dialog-glass {
+  border-radius: var(--radius);
+}
+html[data-terminal-mode] [data-slot="command-footer"] {
+  border-end-start-radius: var(--radius);
+  border-end-end-radius: var(--radius);
+}
+html[data-terminal-mode] .dropdown-glass {
+  border-radius: var(--radius);
+  background: color-mix(in oklab, var(--term-panel) var(--glass-opacity), transparent);
+  border-color: var(--term-panel-outline);
+}
+
+/* The host's outline and the shell's glass frame the statusline, so they square off too. */
+html[data-terminal-mode] :is([data-chat-composer-surface], [data-chat-composer-main-surface]),
+html[data-terminal-mode] [data-slot="composer-host"],
+html[data-terminal-mode] [data-slot="composer-host"]::before,
+html[data-terminal-mode] [data-slot="composer-shell"]::before {
+  border-radius: var(--radius);
+}
+/* A request or notice attached above the composer shares its top edge, square like it. */
+html[data-terminal-mode] [data-chat-composer-top-drawer]::before {
+  border-start-start-radius: var(--radius);
+  border-start-end-radius: var(--radius);
+}
+
+/* The composer reads as the next prompt line. */
+html[data-terminal-mode] [data-chat-composer-body] .flow-root:has(> * > [data-composer-rich-text]) {
+  padding-inline-start: 2ch;
+
+  & > .text-placeholder {
+    inset-inline-start: 2ch;
+  }
+
+  &::before {
+    content: "❯";
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    line-height: 1.625;
+    color: var(--term-green);
+    font-weight: 700;
+  }
+}
+html[data-terminal-mode] [data-composer-rich-text] {
+  caret-color: var(--term-green);
+  caret-shape: block;
+}
+
+html[data-terminal-mode] ::selection {
+  background-color: color-mix(in oklab, var(--term-blue) 35%, transparent);
+}
+
+/* The open thread gets a cursorline marker. */
+html[data-terminal-mode] [data-sidebar-row][aria-current="page"] {
+  box-shadow: inset 2px 0 0 var(--term-green);
+}
+
+html[data-terminal-mode] [data-timeline-row-kind="turn-fold"] button[aria-expanded]::before {
+  content: "+--";
+  color: var(--term-bright-black);
+}
+html[data-terminal-mode] [data-timeline-row-kind="turn-fold"] button[aria-expanded="true"]::before {
+  content: "-";
+}
+
+html[data-terminal-mode] .chat-markdown-codeblock-header > span:first-child {
+  color: var(--t3-syntax-token-keyword);
+}
+
+/* Code blocks number their lines in the comment color, like `:set number`. A wrapped
+   line hangs past the gutter. The highlighter ends every block with one empty line. */
+html[data-terminal-mode] .chat-markdown-shiki code {
+  counter-reset: t3-line;
+
+  & .line:not(:last-child:empty) {
+    display: inline-block;
+    width: 100%;
+    padding-inline-start: 5ch;
+    text-indent: -5ch;
+
+    &::before {
+      counter-increment: t3-line;
+      content: counter(t3-line);
+      display: inline-block;
+      width: 3ch;
+      margin-inline-end: 2ch;
+      text-align: end;
+      text-indent: 0;
+      color: var(--t3-syntax-token-comment);
+      user-select: none;
+    }
+  }
+}
+
+/* The header reads as a tabline: the project as a block in its color, then the
+   thread as the selected tab. The tabs' edges replace the slash. */
+html[data-terminal-mode] [data-chat-header] nav[aria-label="Thread breadcrumb"] > ol {
+  gap: 0;
+
+  & > li[aria-hidden="true"] {
+    display: none;
+  }
+  & > li > button,
+  & > li[aria-current="page"] {
+    padding: 0.2rem 1ch;
+    border-radius: 0;
+  }
+  & > li[aria-current="page"] > button {
+    padding: 0;
+  }
+  & button[data-project-color] {
+    background-color: var(--project-color);
+    font-weight: 700;
+
+    &,
+    & * {
+      color: var(--background);
+    }
+  }
+  & > li[aria-current="page"] {
+    flex: 0 1 auto;
+    background-color: color-mix(in oklab, var(--term-bright-black) 22%, transparent);
+  }
+}
+
+/* Vim keys: the editor carries its mode. Normal mode rests a blue block on a character,
+   as lualine colors it; insert mode types at a green bar. */
+html[data-terminal-mode][data-vim-keys] [data-vim-mode="insert"] {
+  caret-shape: bar;
+}
+html[data-terminal-mode][data-vim-keys] [data-vim-mode="normal"] {
+  caret-shape: block;
+  caret-color: var(--term-blue);
+}
+html[data-terminal-mode]
+  [data-slot="composer-shell"]:has([data-vim-mode="normal"])
+  [data-statusline-mode="vim"] {
+  background-color: var(--term-blue);
+
+  &::before {
+    content: "NORMAL";
+  }
+}
+
+/* A vim statusline under the composer: the mode as a block, then git and context. */
+html[data-terminal-mode] [data-terminal-statusline] {
+  display: flex;
+  align-items: center;
+  gap: 2ch;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-size-code, 0.8125rem);
+  color: var(--muted-foreground);
+  /* Solid, so the timeline scrolling behind it never shows through. */
+  background-color: color-mix(in oklab, var(--term-bright-black) 14%, var(--background));
+  white-space: nowrap;
+  overflow: hidden;
+  border-end-start-radius: var(--radius);
+  border-end-end-radius: var(--radius);
+
+  & [data-statusline-mode] {
+    padding-inline: 1ch;
+    font-weight: 700;
+    color: var(--background);
+    background-color: var(--term-green);
+  }
+  & [data-statusline-mode="vim"]::before {
+    content: "INSERT";
+  }
+  & [data-statusline-mode="agent"] {
+    margin-inline-start: -2ch;
+    background-color: var(--term-yellow);
+  }
+  & [data-statusline-mode="agent"]:first-child {
+    margin-inline-start: 0;
+  }
+  & > :first-child:not([data-statusline-mode]) {
+    padding-inline-start: 1ch;
+  }
+  & [data-statusline-branch] {
+    color: var(--term-magenta);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  & [data-statusline-fill] {
+    flex: 1;
+  }
+  /* The composer's context strip (worktree, PR, branch) reads as statusline segments. */
+  & [data-statusline-git] {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+
+    & > * {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+  & [data-slot="composer-context-strip"] {
+    padding: 0;
+    gap: 2ch;
+    color: inherit;
+
+    & :is(button, a) {
+      height: auto;
+      min-height: 0;
+      padding-block: 0;
+      font-size: inherit;
+    }
+  }
+  /* Labels stay as text when the strip would collapse them to icons; the branch is uncapped. */
+  & [data-composer-label] {
+    max-width: none;
+  }
+  & [data-composer-label-motion] {
+    opacity: 1;
+  }
+  & [data-composer-branch] [data-composer-label-motion] {
+    max-width: none;
+  }
+  & [data-statusline-context] {
+    padding-inline-end: 1ch;
+    color: var(--foreground);
+  }
+}
+
+/* Permission prompt: the request sits on the composer as a terminal prompt. The timeline
+   row keeps the log line, and the prompt holds the answers. */
+html[data-terminal-mode] [data-approval-actions] {
+  display: none;
+}
+html[data-terminal-mode] [data-terminal-approval-prompt] {
+  border-inline-start: 2px solid var(--term-yellow);
+
+  & [data-terminal-approval-title] {
+    color: var(--term-yellow);
+  }
+  & [data-terminal-approval-detail] {
+    font-size: var(--font-size-code, 0.8125rem);
+    color: var(--foreground);
+  }
+  & [data-terminal-approval-option] {
+    color: var(--muted-foreground);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--foreground);
+    }
+    &[data-selected] {
+      color: var(--foreground);
+
+      & > :first-child {
+        color: var(--term-yellow);
+      }
+    }
+    &[data-flash] {
+      animation: terminal-approval-flash 250ms ease-out;
+    }
+  }
+  & [data-terminal-approval-reason] {
+    color: var(--term-cyan);
+  }
+  & [data-terminal-approval-result="declined"] {
+    color: var(--term-red);
+    font-weight: 700;
+  }
+  /* Answered: the prompt keeps its shape and takes the answer's colour until it goes. */
+  &[data-terminal-approval-outcome] {
+    border-inline-start-color: var(--term-outcome);
+
+    & [data-terminal-approval-title],
+    & [data-terminal-approval-option][data-selected],
+    & [data-terminal-approval-option][data-selected] > :first-child {
+      color: var(--term-outcome);
+    }
+  }
+  &[data-terminal-approval-outcome="approved"] {
+    --term-outcome: var(--term-green);
+  }
+  &[data-terminal-approval-outcome="declined"] {
+    --term-outcome: var(--term-red);
+  }
+}
+html[data-terminal-mode] [data-chat-composer-top-drawer]:has([data-terminal-approval-outcome]) {
+  --chat-composer-attached-outline: color-mix(in oklab, var(--term-outcome) 32%, transparent);
+  --chat-composer-attached-tint: color-mix(in oklab, var(--term-outcome) 10%, transparent);
+}
+html[data-terminal-mode]
+  [data-chat-composer-top-drawer]:has([data-terminal-approval-outcome="approved"]) {
+  --term-outcome: var(--term-green);
+}
+html[data-terminal-mode]
+  [data-chat-composer-top-drawer]:has([data-terminal-approval-outcome="declined"]) {
+  --term-outcome: var(--term-red);
+}
+@keyframes terminal-approval-flash {
+  from {
+    background-color: color-mix(in oklab, var(--term-yellow) 25%, transparent);
+  }
+}

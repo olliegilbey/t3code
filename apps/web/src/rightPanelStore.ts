@@ -124,6 +124,7 @@ interface RightPanelStoreState {
   open: (
     ref: ScopedThreadRef,
     kind: Exclude<RightPanelKind, "file" | "terminal" | "pull-request" | "side-chat">,
+    automatic?: boolean,
   ) => void;
   openSideChat: (ref: ScopedThreadRef, threadId: ThreadId) => void;
   openDevice: (ref: ScopedThreadRef, target: DeviceTabTarget, automatic?: boolean) => void;
@@ -687,9 +688,9 @@ export const useRightPanelStore = create<RightPanelStoreState>()(
         });
         return opened;
       },
-      open: (ref, kind) =>
+      open: (ref, kind, automatic = false) =>
         set((state) =>
-          userAction(state, scopedThreadKey(ref), (current) => {
+          (automatic ? automaticUpdate : userAction)(state, scopedThreadKey(ref), (current) => {
             if (kind === "preview") {
               const existing = current.surfaces.find((surface) => surface.kind === "preview");
               return upsertSurface(current, existing ?? browserSurface(null));
