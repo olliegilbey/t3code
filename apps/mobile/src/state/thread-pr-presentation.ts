@@ -69,44 +69,27 @@ export function presentThreadLinkedPullRequests(
   const { changeRequest } =
     sourceControlClients.findByChangeRequestUrl(link.url) ?? sourceControlClients.get(undefined);
   const snapshot = link.snapshot;
-  const linkedCount = badge.kind === "pull-request" && badge.others > 0 ? badge.others + 1 : null;
-  const isMultiple = badge.kind === "stack" || linkedCount !== null;
-  const state = isMultiple
-    ? badge.state === "draft"
-      ? "open"
-      : badge.state
-    : (snapshot?.state ?? null);
-  const isDraft = isMultiple
-    ? badge.state === "draft"
-    : snapshot?.isDraft === true && state === "open";
-  const label =
-    badge.kind === "stack"
-      ? String(badge.layers)
-      : linkedCount !== null
-        ? `+${linkedCount}`
-        : String(link.number);
+  const state = snapshot?.state ?? null;
+  const isDraft = snapshot?.isDraft === true && state === "open";
+  const others = badge.kind === "stack" ? badge.layers - 1 : badge.others;
+  const shown = `#${link.number} ${changeRequest.singular} ${state === null ? "status pending" : isDraft ? "draft" : state}`;
   return {
     kind: badge.kind,
-    others: badge.kind === "pull-request" ? badge.others : 0,
+    others,
     number: link.number,
     state,
     isDraft,
     updatedAt: snapshot?.updatedAt ?? null,
     url: link.url,
     changeRequest,
-    label,
+    label: String(link.number),
     accessibilityLabel:
       badge.kind === "stack"
-        ? `${badge.layers} ${changeRequest.singular}s in stack, ${isDraft ? "draft" : (state ?? "status pending")}`
-        : linkedCount !== null
-          ? `${linkedCount} linked ${changeRequest.plural}, overall ${badge.state}`
-          : `#${link.number} ${changeRequest.singular} ${state === null ? "status pending" : isDraft ? "draft" : state}`,
-    textClassName:
-      state === null || isDraft
-        ? "text-foreground-muted"
-        : isMultiple && state === "closed"
-          ? "text-adaptive-rose-600-400"
-          : PR_STATE_TEXT_CLASS[state],
+        ? `${shown}, in a stack of ${badge.layers} ${changeRequest.plural}`
+        : others > 0
+          ? `${shown}, and ${others} more linked`
+          : shown,
+    textClassName: state === null || isDraft ? "text-foreground-muted" : PR_STATE_TEXT_CLASS[state],
   };
 }
 
