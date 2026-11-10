@@ -55,11 +55,7 @@ import {
 import type { SidebarThreadSummary } from "../types";
 import { formatWorktreePathForDisplay } from "../worktreeCleanup";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
-import {
-  PULL_REQUEST_STATE_PRESENTATION,
-  PullRequestGlyph,
-  type PullRequestGlyphIcon,
-} from "./pullRequest/pullRequestIcons";
+import { PullRequestGlyph, type PullRequestGlyphIcon } from "./pullRequest/pullRequestIcons";
 import { resolvePullRequestState } from "./pullRequest/pullRequestPresentation";
 
 export interface PrStatusIndicator {
@@ -199,86 +195,11 @@ export interface ThreadPullRequestBadgePresentation {
   readonly Icon: PullRequestGlyphIcon;
   readonly toneClassName: string;
   readonly label: string;
-  readonly text: string | number;
+  readonly number: number;
+  readonly others: number;
 }
 
 type PullRequestBadgeState = ThreadPullRequestBadge["state"];
-
-function stackBadgeLabel(
-  state: PullRequestBadgeState,
-  count: number,
-  term: ChangeRequestTermKind,
-  resolve: MessageResolver,
-): string {
-  switch (state) {
-    case "open":
-      return resolve(
-        msg(
-          "{count, plural, one {Stack of {count} {term, select, mr {merge requests} cr {change requests} other {pull requests}}, open} other {Stack of {count} {term, select, mr {merge requests} cr {change requests} other {pull requests}}, open}}",
-          { count, term },
-        ),
-      );
-    case "draft":
-      return resolve(
-        msg(
-          "{count, plural, one {Stack of {count} {term, select, mr {merge requests} cr {change requests} other {pull requests}}, draft} other {Stack of {count} {term, select, mr {merge requests} cr {change requests} other {pull requests}}, draft}}",
-          { count, term },
-        ),
-      );
-    case "closed":
-      return resolve(
-        msg(
-          "{count, plural, one {Stack of {count} {term, select, mr {merge requests} cr {change requests} other {pull requests}}, closed} other {Stack of {count} {term, select, mr {merge requests} cr {change requests} other {pull requests}}, closed}}",
-          { count, term },
-        ),
-      );
-    case "merged":
-      return resolve(
-        msg(
-          "{count, plural, one {Stack of {count} {term, select, mr {merge requests} cr {change requests} other {pull requests}}, merged} other {Stack of {count} {term, select, mr {merge requests} cr {change requests} other {pull requests}}, merged}}",
-          { count, term },
-        ),
-      );
-  }
-}
-
-function moreLinkedBadgeLabel(
-  state: PullRequestBadgeState,
-  tooltip: string,
-  others: number,
-  resolve: MessageResolver,
-): string {
-  switch (state) {
-    case "open":
-      return resolve(
-        msg(
-          "{others, plural, one {{tooltip}, and {others} more linked; overall open} other {{tooltip}, and {others} more linked; overall open}}",
-          { tooltip, others },
-        ),
-      );
-    case "draft":
-      return resolve(
-        msg(
-          "{others, plural, one {{tooltip}, and {others} more linked; overall draft} other {{tooltip}, and {others} more linked; overall draft}}",
-          { tooltip, others },
-        ),
-      );
-    case "closed":
-      return resolve(
-        msg(
-          "{others, plural, one {{tooltip}, and {others} more linked; overall closed} other {{tooltip}, and {others} more linked; overall closed}}",
-          { tooltip, others },
-        ),
-      );
-    case "merged":
-      return resolve(
-        msg(
-          "{others, plural, one {{tooltip}, and {others} more linked; overall merged} other {{tooltip}, and {others} more linked; overall merged}}",
-          { tooltip, others },
-        ),
-      );
-  }
-}
 
 function prStatusLabels(
   state: PullRequestBadgeState,
@@ -352,23 +273,8 @@ function resolveThreadPullRequestBadgePresentation(
   },
   resolve: MessageResolver = m,
 ): ThreadPullRequestBadgePresentation | null {
-  const terminology = changeRequestTerminologyForUrl(url);
-  if (badge?.kind === "stack") {
-    const aggregate = PULL_REQUEST_STATE_PRESENTATION[badge.state];
-    return {
-      Icon: PullRequestGlyph.stack,
-      toneClassName: aggregate.toneClassName,
-      label: stackBadgeLabel(
-        badge.state,
-        badge.layers,
-        changeRequestTermKind(terminology),
-        resolve,
-      ),
-      text: badge.layers,
-    };
-  }
   if (number === undefined || url === undefined) return null;
-
+  const terminology = changeRequestTerminologyForUrl(url);
   const tooltip =
     status?.tooltip ??
     resolve(
@@ -377,20 +283,31 @@ function resolveThreadPullRequestBadgePresentation(
         number,
       }),
     );
-  if (badge?.kind === "pull-request" && badge.others > 0) {
-    const aggregate = PULL_REQUEST_STATE_PRESENTATION[badge.state];
-    return {
-      Icon: aggregate.Icon,
-      toneClassName: aggregate.toneClassName,
-      label: moreLinkedBadgeLabel(badge.state, tooltip, badge.others, resolve),
-      text: `+${badge.others + 1}`,
-    };
-  }
+  const others = badge === null ? 0 : badge.kind === "stack" ? badge.layers - 1 : badge.others;
   return {
-    Icon: status?.Icon ?? PullRequestGlyph.pullRequest,
+    Icon:
+      badge?.kind === "stack"
+        ? PullRequestGlyph.stack
+        : (status?.Icon ?? PullRequestGlyph.pullRequest),
     toneClassName: status?.colorClass ?? "text-muted-foreground",
-    label: tooltip,
-    text: number,
+    label:
+      badge?.kind === "stack"
+        ? resolve(
+            msg(
+              "{count, plural, one {{tooltip}, in a stack of {count} {term, select, mr {merge requests} cr {change requests} other {pull requests}}} other {{tooltip}, in a stack of {count} {term, select, mr {merge requests} cr {change requests} other {pull requests}}}}",
+              { tooltip, count: badge.layers, term: changeRequestTermKind(terminology) },
+            ),
+          )
+        : others > 0
+          ? resolve(
+              msg(
+                "{others, plural, one {{tooltip}, and {others} more linked} other {{tooltip}, and {others} more linked}}",
+                { tooltip, others },
+              ),
+            )
+          : tooltip,
+    number,
+    others,
   };
 }
 
@@ -480,7 +397,10 @@ function PullRequestBadge({
           className={cn("contents font-normal text-xs tabular-nums", presentation.toneClassName)}
         >
           <presentation.Icon aria-hidden className="size-3 shrink-0" />
-          <span className="text-secondary-label">{presentation.text}</span>
+          <span>{presentation.number}</span>
+          {presentation.others > 0 ? (
+            <span className="text-secondary-label">+{presentation.others}</span>
+          ) : null}
         </span>
       </TooltipTrigger>
       <TooltipPopup
@@ -1090,14 +1010,7 @@ export function ThreadSearchPullRequestNumber({
     m,
   );
   if (presentation === null) return null;
-  const aggregate = badge !== null && (badge.kind === "stack" || badge.others > 0);
-  const state = aggregate
-    ? badge.state
-    : pr === null
-      ? null
-      : pr.state === "open" && pr.isDraft
-        ? "draft"
-        : pr.state;
+  const state = pr === null ? null : pr.state === "open" && pr.isDraft ? "draft" : pr.state;
   return (
     <span
       aria-label={presentation.label}
@@ -1110,7 +1023,10 @@ export function ThreadSearchPullRequestNumber({
     >
       {/* text-current opts out of the command palette's muted icon color. */}
       <presentation.Icon aria-hidden className="size-3 shrink-0 text-current" />
-      <span>{presentation.text}</span>
+      <span>{presentation.number}</span>
+      {presentation.others > 0 ? (
+        <span className="text-secondary-label">+{presentation.others}</span>
+      ) : null}
     </span>
   );
 }
