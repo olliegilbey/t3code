@@ -158,6 +158,11 @@ export class EnvironmentRegistry extends Context.Service<
       | PlatformEnvironmentRemovalError
     >;
     readonly retryNow: (environmentId: EnvironmentId) => Effect.Effect<void>;
+    /**
+     * A person's retry. Unlike `retryNow`, it also stops an SSH login still in
+     * flight, which can wait on an approval prompt that has gone away.
+     */
+    readonly reconnect: (environmentId: EnvironmentId) => Effect.Effect<void>;
     readonly setEnabled: (
       environmentId: EnvironmentId,
       enabled: boolean,
@@ -1053,6 +1058,26 @@ export const make = Effect.gen(function* () {
       Effect.catchTags({ EnvironmentNotRegisteredError: () => Effect.void }),
       Effect.withSpan("EnvironmentRegistry.retryNow"),
     );
+  const reconnect = Effect.fn("EnvironmentRegistry.reconnect")(
+    function* (environmentId: EnvironmentId) {
+      for (const route of connectionRoutes(yield* getEntry(environmentId))) {
+        const profile = Option.getOrNull(route.profile);
+        if (profile !== null && isSshConnectionProfile(profile)) {
+          yield* ssh.cancelSetup(profile.target).pipe(
+            Effect.tapError((error) =>
+              Effect.logWarning("Could not stop the SSH setup in flight.", {
+                environmentId,
+                error,
+              }),
+            ),
+            Effect.ignore,
+          );
+        }
+      }
+      yield* retryNow(environmentId);
+    },
+    Effect.catchTags({ EnvironmentNotRegisteredError: () => Effect.void }),
+  );
   const setEnabled = Effect.fn("EnvironmentRegistry.setEnabled")(function* (
     environmentId: EnvironmentId,
     enabled: boolean,
@@ -1195,6 +1220,7 @@ export const make = Effect.gen(function* () {
     reorderRoutes,
     removeRelayEnvironments,
     retryNow,
+    reconnect,
     setEnabled,
     setCompatibility,
     state,

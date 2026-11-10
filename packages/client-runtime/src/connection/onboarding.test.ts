@@ -645,6 +645,7 @@ describe("connection onboarding", () => {
               }),
             prepare: () => Effect.die("unused"),
             disconnect: () => Effect.die("unused"),
+            cancelSetup: () => Effect.die("unused"),
           }),
         ),
       );
