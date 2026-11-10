@@ -1370,6 +1370,11 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
             >
               {pr.label}
             </Text>
+            {pr.others > 0 ? (
+              <Text className="text-xs text-foreground-muted" style={{ fontFamily: MONO_FONT }}>
+                +{pr.others}
+              </Text>
+            ) : null}
           </Pressable>
         ) : null}
         {providerInstance ? (

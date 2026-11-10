@@ -51,11 +51,7 @@ import {
 import type { SidebarThreadSummary } from "../types";
 import { formatWorktreePathForDisplay } from "../worktreeCleanup";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
-import {
-  PULL_REQUEST_STATE_PRESENTATION,
-  PullRequestGlyph,
-  type PullRequestGlyphIcon,
-} from "./pullRequest/pullRequestIcons";
+import { PullRequestGlyph, type PullRequestGlyphIcon } from "./pullRequest/pullRequestIcons";
 import { resolvePullRequestState } from "./pullRequest/pullRequestPresentation";
 
 export interface PrStatusIndicator {
@@ -158,7 +154,8 @@ export interface ThreadPullRequestBadgePresentation {
   readonly Icon: PullRequestGlyphIcon;
   readonly toneClassName: string;
   readonly label: string;
-  readonly text: string | number;
+  readonly number: number;
+  readonly others: number;
 }
 
 function resolveThreadPullRequestBadgePresentation({
@@ -172,33 +169,24 @@ function resolveThreadPullRequestBadgePresentation({
   readonly url?: string | undefined;
   readonly status: PrStatusIndicator | null;
 }): ThreadPullRequestBadgePresentation | null {
-  const terminology = changeRequestTerminologyForUrl(url);
-  if (badge?.kind === "stack") {
-    const aggregate = PULL_REQUEST_STATE_PRESENTATION[badge.state];
-    return {
-      Icon: PullRequestGlyph.stack,
-      toneClassName: aggregate.toneClassName,
-      label: `Stack of ${badge.layers} ${terminology.plural}, ${aggregate.label.toLowerCase()}`,
-      text: badge.layers,
-    };
-  }
   if (number === undefined || url === undefined) return null;
-
+  const terminology = changeRequestTerminologyForUrl(url);
   const tooltip = status?.tooltip ?? `${terminology.shortLabel} #${number}, status pending`;
-  if (badge?.kind === "pull-request" && badge.others > 0) {
-    const aggregate = PULL_REQUEST_STATE_PRESENTATION[badge.state];
-    return {
-      Icon: aggregate.Icon,
-      toneClassName: aggregate.toneClassName,
-      label: `${tooltip}, and ${badge.others} more linked; overall ${aggregate.label.toLowerCase()}`,
-      text: `+${badge.others + 1}`,
-    };
-  }
+  const others = badge === null ? 0 : badge.kind === "stack" ? badge.layers - 1 : badge.others;
   return {
-    Icon: status?.Icon ?? PullRequestGlyph.pullRequest,
+    Icon:
+      badge?.kind === "stack"
+        ? PullRequestGlyph.stack
+        : (status?.Icon ?? PullRequestGlyph.pullRequest),
     toneClassName: status?.colorClass ?? "text-muted-foreground",
-    label: tooltip,
-    text: number,
+    label:
+      badge?.kind === "stack"
+        ? `${tooltip}, in a stack of ${badge.layers} ${terminology.plural}`
+        : others > 0
+          ? `${tooltip}, and ${others} more linked`
+          : tooltip,
+    number,
+    others,
   };
 }
 
@@ -287,7 +275,10 @@ function PullRequestBadge({
           className={cn("contents font-normal text-xs tabular-nums", presentation.toneClassName)}
         >
           <presentation.Icon aria-hidden className="size-3 shrink-0" />
-          <span className="text-secondary-label">{presentation.text}</span>
+          <span>{presentation.number}</span>
+          {presentation.others > 0 ? (
+            <span className="text-secondary-label">+{presentation.others}</span>
+          ) : null}
         </span>
       </TooltipTrigger>
       <TooltipPopup
@@ -867,14 +858,7 @@ export function ThreadSearchPullRequestNumber({
     status: prStatusIndicator(pr, linked?.sourceControlProvider),
   });
   if (presentation === null) return null;
-  const aggregate = badge !== null && (badge.kind === "stack" || badge.others > 0);
-  const state = aggregate
-    ? badge.state
-    : pr === null
-      ? null
-      : pr.state === "open" && pr.isDraft
-        ? "draft"
-        : pr.state;
+  const state = pr === null ? null : pr.state === "open" && pr.isDraft ? "draft" : pr.state;
   return (
     <span
       aria-label={presentation.label}
@@ -887,7 +871,10 @@ export function ThreadSearchPullRequestNumber({
     >
       {/* text-current opts out of the command palette's muted icon color. */}
       <presentation.Icon aria-hidden className="size-3 shrink-0 text-current" />
-      <span>{presentation.text}</span>
+      <span>{presentation.number}</span>
+      {presentation.others > 0 ? (
+        <span className="text-secondary-label">+{presentation.others}</span>
+      ) : null}
     </span>
   );
 }
