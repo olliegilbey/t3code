@@ -50,7 +50,29 @@ describe("presentThreadLinkedPullRequests", () => {
           snapshot: { ...top.snapshot!, baseBranch: "change-1" },
         },
       ]),
-    ).toMatchObject({ kind: "stack", label: "2", number: 2, url: top.url });
+    ).toMatchObject({
+      kind: "stack",
+      label: "2",
+      number: 2,
+      others: 1,
+      url: top.url,
+      accessibilityLabel: "#2 pull request open, in a stack of 2 pull requests",
+    });
+  });
+
+  it("shows the open pull request's number and counts the others", () => {
+    const merged = (number: number) => {
+      const link = linkedPr(number);
+      return { ...link, snapshot: { ...link.snapshot!, state: "merged" as const } };
+    };
+    expect(presentThreadLinkedPullRequests([merged(1), linkedPr(2), merged(3)])).toMatchObject({
+      kind: "pull-request",
+      number: 2,
+      label: "2",
+      others: 2,
+      state: "open",
+      accessibilityLabel: "#2 pull request open, and 2 more linked",
+    });
   });
 
   it("names a single link with its host's term", () => {
