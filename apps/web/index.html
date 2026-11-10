@@ -386,6 +386,13 @@
         }
       })();
     </script>
+    <script>
+      try {
+        if (window.localStorage.getItem("t3code:terminal-mode") === "true") {
+          document.documentElement.setAttribute("data-terminal-mode", "");
+        }
+      } catch {}
+    </script>
     <style>
       html,
       body,

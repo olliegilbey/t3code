@@ -2760,6 +2760,25 @@ describe("v2 run and attempt history", () => {
       expect.objectContaining({ id: "work-1" }),
       expect.objectContaining({ id: "provider-recovered" }),
     ]);
+
+    // With disclosures open by default, the same ids toggle them closed instead.
+    const openByDefault = deriveMessagesTimelineRows({
+      timelineEntries,
+      disclosuresOpenByDefault: true,
+      isWorking: false,
+      turnDiffSummaries: [],
+      supportsConversationRollback: false,
+    });
+    expect(openByDefault).toEqual(openedActivity);
+    const closedByToggle = deriveMessagesTimelineRows({
+      timelineEntries,
+      expandedRunIds: new Set(["turn-1" as never]),
+      disclosuresOpenByDefault: true,
+      isWorking: false,
+      turnDiffSummaries: [],
+      supportsConversationRollback: false,
+    });
+    expect(closedByToggle).toEqual(collapsedRows);
   });
   it("hides tool calls or everything but the final answer", () => {
     const runId = RunId.make("turn-1");
