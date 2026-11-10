@@ -831,7 +831,11 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
         </InlineButton>
       ) : null}
       <Tooltip>
-        <TooltipTrigger render={<p className="text-muted-foreground text-xs tabular-nums" />}>
+        <TooltipTrigger
+          render={
+            <p data-timeline-timestamp className="text-muted-foreground text-xs tabular-nums" />
+          }
+        >
           {formatDayAwareTimestamp(row.message.createdAt, ctx.timestampFormat)}
         </TooltipTrigger>
         <TooltipPopup>

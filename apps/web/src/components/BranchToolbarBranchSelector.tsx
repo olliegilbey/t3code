@@ -860,6 +860,7 @@ export function BranchToolbarBranchSelector({
             disabled={isInitialBranchesLoadPending || isBranchActionPending}
             // NVDA browse mode re-reads a combobox when its attributes change, not when its text does.
             aria-label={`Branch: ${triggerLabel}`}
+            data-composer-branch=""
           >
             <GitBranchIcon
               className={cn(
