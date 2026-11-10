@@ -2,6 +2,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
+import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as PlatformError from "effect/PlatformError";
 
@@ -137,4 +138,22 @@ it.effect("retries on the next launch when a GPU cache cannot be removed", () =>
 
     assert.deepStrictEqual(writes, []);
   }).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "uses the profile folder T3CODE_DESKTOP_PROFILE names, so a second build can run beside this one",
+  () =>
+    Effect.gen(function* () {
+      const path = yield* Path.Path;
+      const resolved = yield* resolveUserDataPath({
+        appDataDirectory: "/Users/alice/Library/Application Support",
+        isDevelopment: false,
+        platform: "darwin",
+        userDataProfile: Option.some("t3code-terminal"),
+      });
+      assert.equal(
+        resolved,
+        path.join("/Users/alice/Library/Application Support", "t3code-terminal"),
+      );
+    }).pipe(Effect.provide(NodeServices.layer)),
 );
