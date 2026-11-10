@@ -91,5 +91,9 @@ export class SshEnvironmentGateway extends Context.Service<
     readonly disconnect: (
       target: DesktopSshEnvironmentTarget,
     ) => Effect.Effect<void, ConnectionAttemptError>;
+    /** Stops a setup still in flight, so the next connect runs ssh and asks for login again. */
+    readonly cancelSetup: (
+      target: DesktopSshEnvironmentTarget,
+    ) => Effect.Effect<void, ConnectionAttemptError>;
   }
 >()("@t3tools/client-runtime/platform/capabilities/SshEnvironmentGateway") {}
