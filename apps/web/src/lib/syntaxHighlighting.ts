@@ -28,7 +28,7 @@ export function getSyntaxHighlighterPromise(language: string): Promise<DiffsHigh
   if (cached) return cached;
 
   const promise = getSharedHighlighter({
-    // Both palettes, so switching appearance never needs a new highlighter.
+    // Every palette, so switching appearance or terminal mode never needs a new highlighter.
     themes: Object.values(DIFF_THEME_NAMES),
     langs: [language as SupportedLanguages],
     preferredHighlighter: PREFERRED_HIGHLIGHTER,
