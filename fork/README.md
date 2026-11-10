@@ -15,8 +15,13 @@ Nightly icon and branding. The `9` keeps the build number clear of official ones
   every two nights.
 - `build-server.sh` builds the linux-x64 server archive in its own clone, as the release workflow
   does, and runs the archive smoke test.
-- `install-runtime.sh` installs an archive into `~/.t3/runtime/versions/<version>`. It leaves the
-  running server alone.
+- `install-runtime.sh` installs an archive into `~/.t3/runtime/versions/<version>` and pins it. It
+  leaves the running server alone.
+- `runtime-pin.sh` pins a runtime, or unpins one `rebuild.sh` retires. A starting server deletes
+  every runtime but its own, a reboot included. The Mac app then asks for its version, finds none,
+  and tries upstream's releases, where fork versions 404. A pin is a link in
+  `~/.local/share/t3-fork/pins` listed in `~/.t3/runtime/launchers`, which the prune keeps.
+  `apps/server/src/cloud/forkRuntimePin.test.ts` runs both scripts against the real prune.
 - `deploy.sh` moves the box's server onto the newest fork runtime, run as upstream's background
   service (`systemctl --user status t3code`). A restart would kill every running turn, the
   scheduled task's included, so the switch waits in its own systemd unit (`t3-fork-deploy`) until

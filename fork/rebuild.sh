@@ -59,6 +59,7 @@ prune() {
   old=$(sort -V "$home/runtimes" | uniq | head -n -"$KEEP")
   for version in $old; do
     [ "$version" = "$running" ] && continue
+    "$(dirname "$(realpath "$0")")/runtime-pin.sh" unpin "$version"
     rm -rf "$HOME/.t3/runtime/versions/$version" "$home/artifacts/t3-$version-linux-x64.tar.gz"
     grep -vxF "$version" "$home/runtimes" >"$home/runtimes.next" || true
     mv "$home/runtimes.next" "$home/runtimes"
