@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useEnvironmentScope } from "../../state/session";
 import { childThreadApprovalsAtom, threadEnvironment } from "../../state/threads";
 import { useAtomCommand } from "../../state/use-atom-command";
+import { useTerminalMode } from "../../terminalMode";
 import { ComposerPendingApprovalActions } from "./ComposerPendingApprovalActions";
 
 function ChildApproval({ entry }: { entry: ChildThreadApproval }) {
@@ -77,7 +78,9 @@ function ChildApproval({ entry }: { entry: ChildThreadApproval }) {
 
 export function ChildThreadApprovals({ threadRef }: { threadRef: ScopedThreadRef | null }) {
   const approvals = useAtomValue(childThreadApprovalsAtom(threadRef));
-  if (approvals.length === 0) return null;
+  // Terminal mode answers these in the composer's prompt.
+  const terminalMode = useTerminalMode();
+  if (approvals.length === 0 || terminalMode) return null;
   return (
     <div className="mb-2 flex max-h-80 flex-col gap-2 overflow-auto">
       {approvals.map((entry) => (

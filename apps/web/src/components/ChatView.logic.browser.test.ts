@@ -1,7 +1,7 @@
 import { expect, it } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 import { createWorkspaceFocusController } from "../lib/workspaceFocus";
-import { shouldRefocusComposerOnWindowFocus } from "./ChatView.logic";
+import { composerMayTakeFocus } from "./ChatView.logic";
 
 it("keeps keyboard focus on a sidebar row on window return, but not a clicked row", async () => {
   const list = document.createElement("ul");
@@ -21,11 +21,11 @@ it("keeps keyboard focus on a sidebar row on window return, but not a clicked ro
 
   await userEvent.click(clicked);
   expect(document.activeElement).toBe(clicked);
-  expect(shouldRefocusComposerOnWindowFocus(document.activeElement)).toBe(true);
+  expect(composerMayTakeFocus(document.activeElement)).toBe(true);
 
   await userEvent.tab();
   expect(document.activeElement).toBe(tabbed);
-  expect(shouldRefocusComposerOnWindowFocus(document.activeElement)).toBe(false);
+  expect(composerMayTakeFocus(document.activeElement)).toBe(false);
 });
 
 it("keeps focus in a region with its own keys on window return", async () => {
@@ -38,7 +38,7 @@ it("keeps focus in a region with its own keys on window return", async () => {
 
   await userEvent.click(region);
   expect(document.activeElement).toBe(region);
-  expect(shouldRefocusComposerOnWindowFocus(document.activeElement)).toBe(false);
+  expect(composerMayTakeFocus(document.activeElement)).toBe(false);
 });
 
 it("refocuses the composer on window return from a clicked area after a bare key press", async () => {
@@ -61,7 +61,7 @@ it("refocuses the composer on window return from a clicked area after a bare key
   // A window switch can deliver a lone modifier key without moving focus.
   await userEvent.keyboard("{Shift}");
   expect(
-    shouldRefocusComposerOnWindowFocus(document.activeElement),
+    composerMayTakeFocus(document.activeElement),
     "a clicked area counts as reached from the keyboard after a bare key press",
   ).toBe(true);
 
@@ -70,5 +70,5 @@ it("refocuses the composer on window return from a clicked area after a bare key
   await userEvent.keyboard("{F6}");
   controller.move(1);
   expect(document.activeElement).toBe(conversation);
-  expect(shouldRefocusComposerOnWindowFocus(document.activeElement)).toBe(false);
+  expect(composerMayTakeFocus(document.activeElement)).toBe(false);
 });

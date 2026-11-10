@@ -23,6 +23,7 @@ import {
   turnItemHasDetail,
   turnItemNeedsDetailFetch,
 } from "@t3tools/client-runtime/work-log/item-detail";
+import { commandDisplayText } from "@t3tools/client-runtime/work-log/command-label";
 import { claudeSkillInvocation } from "@t3tools/shared/toolActivity";
 import { memo, use, useState, type KeyboardEvent } from "react";
 import {
@@ -55,6 +56,8 @@ import {
   type TimelineWorkEntry,
 } from "./timelineRowContext";
 import { MESSAGE_HEADING_LEVEL, TimelineRowTimestamp } from "./TimelineRowParts";
+import { ShellCommandText } from "./ShellCommandText";
+import { useTerminalMode } from "../../terminalMode";
 import {
   failedToolIconClassName,
   toolIconAcceptsTint,
@@ -220,6 +223,8 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       ? notificationChildThreadId(workEntry.projectedItem.item.source)
       : undefined;
   const groupView = use(WorkGroupViewCtx);
+  // Terminal mode opens tool groups, so a thought there stays a label until it is clicked.
+  const foldThought = useTerminalMode();
   const [expanded, setExpanded] = useState(
     () => groupView?.state.expandedEntries.has(workEntry.id) ?? false,
   );
@@ -327,7 +332,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
     ? getQuestionTextPreview(workEntry.questionAnswer)
     : "";
   const previewText =
-    isReasoning && expanded
+    isReasoning && (expanded || foldThought)
       ? workEntry.toolLifecycleStatus === "inProgress"
         ? "Thinking"
         : "Thought"
@@ -439,6 +444,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       data-work-entry-id={workEntry.id}
       data-v2-item-type={workEntry.projectedItem?.item.type}
       data-v2-item-visibility={workEntry.projectedItem?.visibility}
+      data-tool-status={showFailedIndicator ? "failed" : workEntry.toolLifecycleStatus}
       {...rowToggleProps}
       icon={
         <span
@@ -460,7 +466,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
             <span
               className={cn(answerPreview ? "min-w-0" : "min-w-0 flex-1", "truncate", headingClass)}
             >
-              {isReasoning && !expanded ? (
+              {isReasoning && !expanded && !foldThought ? (
                 <ChatMarkdown
                   inline
                   text={(workEntry.detail ?? previewText).slice(
@@ -481,6 +487,8 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
                   environmentId={ctx.activeThreadEnvironmentId}
                   linked
                 />
+              ) : workEntry.command && previewText === commandDisplayText(workEntry.command) ? (
+                <ShellCommandText command={previewText} />
               ) : (
                 previewText
               )}

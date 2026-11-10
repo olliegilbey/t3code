@@ -1069,11 +1069,11 @@ export function hasServerAcknowledgedLocalDispatch(input: {
   );
 }
 
-// Window return puts the caret in the composer unless focus is deliberate: another text field,
-// a terminal, an open dialog, menu, or popup, a region or sidebar row reached from the keyboard,
-// or a region with its own keys (aria-keyshortcuts). A plain focused button or a clicked row
-// yields to the composer.
-export function shouldRefocusComposerOnWindowFocus(
+// Returning to the window, or a permission request showing, lands the caret in the composer.
+// Not from deliberate focus: another text field, a terminal, the side chat, an open dialog, menu
+// or popup, a region or sidebar row reached from the keyboard, or a region with its own keys
+// (aria-keyshortcuts). A plain button yields.
+export function composerMayTakeFocus(
   activeElement:
     | (Pick<Element, "tagName" | "closest" | "getAttribute"> & { isContentEditable?: boolean })
     | null,
@@ -1092,7 +1092,7 @@ export function shouldRefocusComposerOnWindowFocus(
   }
   return (
     activeElement.closest(
-      '[data-workspace-keyboard-focus], [data-sidebar-row]:focus-visible, [role="dialog"], [role="alertdialog"], [role="application"], [role="menu"], [role="listbox"], [data-slot$="-popup"], [data-terminal-owner], [aria-keyshortcuts]',
+      '[data-workspace-keyboard-focus], [data-sidebar-row]:focus-visible, [role="dialog"], [role="alertdialog"], [role="application"], [role="menu"], [role="listbox"], [data-slot$="-popup"], [data-terminal-owner], [aria-keyshortcuts], [data-side-chat-pane]',
     ) === null
   );
 }
