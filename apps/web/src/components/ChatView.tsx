@@ -349,6 +349,8 @@ import {
 import { QueuedRunsControl, type QueuedRunsControlHandle } from "./chat/QueuedRunsControl";
 import { useThreadLinkedPullRequest } from "./pullRequest/useThreadLinkedPullRequest";
 import { useProactivePanels } from "../hooks/useProactivePanels";
+import { useDefaultDiffPanel } from "../hooks/useDefaultDiffPanel";
+import { TerminalStatusline } from "./chat/TerminalStatusline";
 import { useIncrementalTimelineEntries } from "../hooks/useIncrementalTimelineEntries";
 import { useRightPanelSurfaceClose } from "../hooks/useRightPanelSurfaceClose";
 import { ComposerBannerStack, type ComposerBannerStackItem } from "./chat/ComposerBannerStack";
@@ -379,7 +381,7 @@ import {
   resolveSendEnvMode,
   startNewThreadForProject,
   codexArtifactTemplatePromptToAppend,
-  shouldRefocusComposerOnWindowFocus,
+  composerMayTakeFocus,
   hasCompactableConversation,
 } from "./ChatView.logic";
 import { useLocalStorage } from "~/hooks/useLocalStorage";
@@ -2133,6 +2135,11 @@ export default function ChatView(props: ChatViewProps) {
     visiblePullRequestCount,
     onDiffPanelOpen,
   });
+  useDefaultDiffPanel({
+    threadRef: isServerThread ? activeThreadRef : null,
+    isGitRepo: gitStatusQuery.data?.isRepo,
+    enabled: !threadDetailLoading && !shouldUsePlanSidebarSheet,
+  });
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- consumes a pending maximize request from the right panel store once the panel can maximize
   useEffect(() => {
     if (!canMaximizeRightPanel) return;
@@ -2272,10 +2279,7 @@ export default function ChatView(props: ChatViewProps) {
         frame = window.requestAnimationFrame(() => {
           frame = null;
           if (document.querySelector("[data-mcp-app-fullscreen]") !== null) return;
-          if (
-            !isInSideChatPane(document.activeElement) &&
-            shouldRefocusComposerOnWindowFocus(document.activeElement, document.getSelection())
-          ) {
+          if (composerMayTakeFocus(document.activeElement, document.getSelection())) {
             focusComposerStable();
           }
         });
@@ -3875,6 +3879,7 @@ export default function ChatView(props: ChatViewProps) {
                                 environmentUnavailable={activeEnvironmentUnavailableState}
                                 activePendingApproval={activePendingApproval}
                                 pendingApprovals={pendingApprovals}
+                                onRespondToApproval={onRespondToApprovalStable}
                                 onHeldRequestIdsChange={onHeldRequestIdsChange}
                                 pendingUserInputs={pendingUserInputs}
                                 activePendingIsResponding={activePendingIsResponding}
@@ -3964,67 +3969,75 @@ export default function ChatView(props: ChatViewProps) {
                             data-terminal-open={terminalUiState.terminalOpen ? "true" : undefined}
                             className="relative z-0"
                           >
-                            {showComposerContextStrip && (
-                              <div className="pointer-events-auto">
-                                <BranchToolbar
-                                  forceNewWorktree={multipleModelSelections !== null}
-                                  ref={branchToolbarRef}
-                                  environmentId={activeThread.environmentId}
-                                  threadId={activeThread.id}
-                                  projectId={activeThread.projectId}
-                                  worktreePath={activeThread.worktreePath}
-                                  isServerThread={isServerThread}
-                                  showGitControls={
-                                    isGitRepo || worktreeRepositoryChoices.tracksGitRepositories
-                                  }
-                                  showBranchControls={isGitRepo}
-                                  {...(routeKind === "draft" && draftId ? { draftId } : {})}
-                                  onEnvModeChange={onEnvModeChangeStable}
-                                  startFromOrigin={startFromOrigin}
-                                  onStartFromOriginChange={onStartFromOriginChange}
-                                  envMode={envMode}
-                                  {...(canOverrideServerThreadEnvMode
-                                    ? {
-                                        activeThreadBranchOverride: activeThreadBranch,
-                                        onActiveThreadBranchOverrideChange:
-                                          setPendingServerThreadBranch,
-                                      }
-                                    : {})}
-                                  envLocked={envLocked}
-                                  onComposerFocusRequest={scheduleComposerFocusStable}
-                                  {...(canCheckoutPullRequestIntoThread
-                                    ? { onCheckoutPullRequestRequest: openPullRequestDialogStable }
-                                    : {})}
-                                  {...(canChangeEnvironment
-                                    ? { onEnvironmentChange: onEnvironmentChangeStable }
-                                    : {})}
-                                  autoEnvironmentLabel={autoEnvironmentLabel}
-                                  onAutoEnvironment={
-                                    draftId &&
-                                    !envLocked &&
-                                    canAutoBalanceEnvironments &&
-                                    loadBalancingSettings.loadBalancingEnabled
-                                      ? onAutoEnvironmentStable
-                                      : undefined
-                                  }
-                                  availableEnvironments={logicalProjectEnvironments}
-                                  {...(isServerThread
-                                    ? {}
-                                    : {
-                                        trailing: (
-                                          <ComposerContextPermissions
-                                            environmentId={environmentId}
-                                            runtimeMode={runtimeMode}
-                                            supportedRuntimeModes={
-                                              activeProviderStatus?.supportedRuntimeModes
-                                            }
-                                            onRuntimeModeChange={handleRuntimeModeChangeStable}
-                                          />
-                                        ),
-                                      })}
-                                />
-                              </div>
-                            )}
+                            <TerminalStatusline
+                              working={isWorking}
+                              branch={activeThread?.branch ?? null}
+                              context={activeContextWindow}
+                            >
+                              {showComposerContextStrip && (
+                                <div className="pointer-events-auto">
+                                  <BranchToolbar
+                                    forceNewWorktree={multipleModelSelections !== null}
+                                    ref={branchToolbarRef}
+                                    environmentId={activeThread.environmentId}
+                                    threadId={activeThread.id}
+                                    projectId={activeThread.projectId}
+                                    worktreePath={activeThread.worktreePath}
+                                    isServerThread={isServerThread}
+                                    showGitControls={
+                                      isGitRepo || worktreeRepositoryChoices.tracksGitRepositories
+                                    }
+                                    showBranchControls={isGitRepo}
+                                    {...(routeKind === "draft" && draftId ? { draftId } : {})}
+                                    onEnvModeChange={onEnvModeChangeStable}
+                                    startFromOrigin={startFromOrigin}
+                                    onStartFromOriginChange={onStartFromOriginChange}
+                                    envMode={envMode}
+                                    {...(canOverrideServerThreadEnvMode
+                                      ? {
+                                          activeThreadBranchOverride: activeThreadBranch,
+                                          onActiveThreadBranchOverrideChange:
+                                            setPendingServerThreadBranch,
+                                        }
+                                      : {})}
+                                    envLocked={envLocked}
+                                    onComposerFocusRequest={scheduleComposerFocusStable}
+                                    {...(canCheckoutPullRequestIntoThread
+                                      ? {
+                                          onCheckoutPullRequestRequest: openPullRequestDialogStable,
+                                        }
+                                      : {})}
+                                    {...(canChangeEnvironment
+                                      ? { onEnvironmentChange: onEnvironmentChangeStable }
+                                      : {})}
+                                    autoEnvironmentLabel={autoEnvironmentLabel}
+                                    onAutoEnvironment={
+                                      draftId &&
+                                      !envLocked &&
+                                      canAutoBalanceEnvironments &&
+                                      loadBalancingSettings.loadBalancingEnabled
+                                        ? onAutoEnvironmentStable
+                                        : undefined
+                                    }
+                                    availableEnvironments={logicalProjectEnvironments}
+                                    {...(isServerThread
+                                      ? {}
+                                      : {
+                                          trailing: (
+                                            <ComposerContextPermissions
+                                              environmentId={environmentId}
+                                              runtimeMode={runtimeMode}
+                                              supportedRuntimeModes={
+                                                activeProviderStatus?.supportedRuntimeModes
+                                              }
+                                              onRuntimeModeChange={handleRuntimeModeChangeStable}
+                                            />
+                                          ),
+                                        })}
+                                  />
+                                </div>
+                              )}
+                            </TerminalStatusline>
                           </div>
                         </div>
                       </ComposerSurface.Shell>

@@ -17,6 +17,12 @@ import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from "@tip
 import { Paragraph } from "@tiptap/extension-paragraph";
 import StarterKit from "@tiptap/starter-kit";
 import { useGT } from "gt-react";
+import {
+  ComposerVimKeysExtension,
+  setComposerVimMode,
+  setVimNormalKeyInterceptor,
+} from "./composerVimKeys";
+import { ComposerDotRunsExtension } from "./composerDotRuns";
 import { newlineInCode, splitBlockKeepMarks } from "@tiptap/pm/commands";
 import { isHistoryTransaction } from "@tiptap/pm/history";
 import {
@@ -168,6 +174,8 @@ export interface ComposerPromptEditorHandle {
     contextIds: string[];
   };
   isCaretOnVisualEdge: (edge: "start" | "end") => boolean;
+  setVimMode: (mode: "insert" | "normal") => void;
+  setVimNormalKeyInterceptor: (fn: ((key: string) => boolean) | null) => void;
 }
 
 export interface ComposerPromptEditorProps {
@@ -891,6 +899,8 @@ function createComposerExtensions(richText: boolean) {
     ComposerCitationExtension,
     ComposerContextReferenceExtension,
     ComposerChipSelectionExtension,
+    ComposerVimKeysExtension,
+    ComposerDotRunsExtension,
     ...(richText
       ? [
           ComposerMarkdownSourceExtension,
@@ -1888,6 +1898,12 @@ function ComposerPromptEditorTiptapInner(
         return edge === "start"
           ? caretRect.top - edgeRect.top < threshold
           : edgeRect.bottom - caretRect.bottom < threshold;
+      },
+      setVimMode: (mode) => {
+        if (editor) setComposerVimMode(editor.view, mode);
+      },
+      setVimNormalKeyInterceptor: (fn) => {
+        if (editor) setVimNormalKeyInterceptor(editor.view, fn);
       },
     }),
     [editor, focusAt, literalText, readSnapshot],
