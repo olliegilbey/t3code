@@ -89,65 +89,45 @@ export function presentThreadLinkedPullRequests(
   const { changeRequest } =
     sourceControlClients.findByChangeRequestUrl(link.url) ?? sourceControlClients.get(undefined);
   const snapshot = link.snapshot;
-  const linkedCount = badge.kind === "pull-request" && badge.others > 0 ? badge.others + 1 : null;
-  const isMultiple = badge.kind === "stack" || linkedCount !== null;
-  const state = isMultiple
-    ? badge.state === "draft"
-      ? "open"
-      : badge.state
-    : (snapshot?.state ?? null);
-  const isDraft = isMultiple
-    ? badge.state === "draft"
-    : snapshot?.isDraft === true && state === "open";
-  const label =
-    badge.kind === "stack"
-      ? String(badge.layers)
-      : linkedCount !== null
-        ? `+${linkedCount}`
-        : String(link.number);
+  const state = snapshot?.state ?? null;
+  const isDraft = snapshot?.isDraft === true && state === "open";
+  const others = badge.kind === "stack" ? badge.layers - 1 : badge.others;
+  const shown = resolve(
+    msg(
+      "{term, select, mr {#{number} merge request {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}} cr {#{number} change request {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}} other {#{number} pull request {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}}}",
+      {
+        number: String(link.number),
+        term: changeRequestTermKind(changeRequest),
+        state: prStateKey(state === null ? null : isDraft ? "draft" : state),
+      },
+    ),
+  );
   return {
     kind: badge.kind,
-    others: badge.kind === "pull-request" ? badge.others : 0,
+    others,
     number: link.number,
     state,
     isDraft,
     updatedAt: snapshot?.updatedAt ?? null,
     url: link.url,
     changeRequest,
-    label,
+    label: String(link.number),
     accessibilityLabel:
       badge.kind === "stack"
         ? resolve(
             msg(
-              "{term, select, mr {{count, plural, one {{count} merge requests in stack, {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}} other {{count} merge requests in stack, {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}}}} cr {{count, plural, one {{count} change requests in stack, {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}} other {{count} change requests in stack, {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}}}} other {{count, plural, one {{count} pull requests in stack, {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}} other {{count} pull requests in stack, {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}}}}}",
-              {
-                count: badge.layers,
-                term: changeRequestTermKind(changeRequest),
-                state: prStateKey(isDraft ? "draft" : state),
-              },
+              "{count, plural, one {{shown}, in a stack of {count} {term, select, mr {merge requests} cr {change requests} other {pull requests}}} other {{shown}, in a stack of {count} {term, select, mr {merge requests} cr {change requests} other {pull requests}}}}",
+              { shown, count: badge.layers, term: changeRequestTermKind(changeRequest) },
             ),
           )
-        : linkedCount !== null
+        : others > 0
           ? resolve(
               msg(
-                "{term, select, mr {{count, plural, one {{count} linked merge requests, overall {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}} other {{count} linked merge requests, overall {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}}}} cr {{count, plural, one {{count} linked change requests, overall {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}} other {{count} linked change requests, overall {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}}}} other {{count, plural, one {{count} linked pull requests, overall {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}} other {{count} linked pull requests, overall {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}}}}}",
-                {
-                  count: linkedCount,
-                  term: changeRequestTermKind(changeRequest),
-                  state: prStateKey(badge.state),
-                },
+                "{others, plural, one {{shown}, and {others} more linked} other {{shown}, and {others} more linked}}",
+                { shown, others },
               ),
             )
-          : resolve(
-              msg(
-                "{term, select, mr {#{number} merge request {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}} cr {#{number} change request {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}} other {#{number} pull request {state, select, pending {status pending} draft {draft} open {open} merged {merged} other {closed}}}}",
-                {
-                  number: String(link.number),
-                  term: changeRequestTermKind(changeRequest),
-                  state: prStateKey(state === null ? null : isDraft ? "draft" : state),
-                },
-              ),
-            ),
+          : shown,
     textClassName: state === null || isDraft ? "text-foreground-muted" : PR_STATE_TEXT_CLASS[state],
   };
 }
