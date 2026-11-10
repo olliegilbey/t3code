@@ -409,6 +409,20 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: [msg("latex tex katex equations formulas markdown")],
   },
   {
+    id: "terminal-mode",
+    title: msg("Terminal mode"),
+    to: "/settings/appearance",
+    searchTerms: [
+      msg("hacker neovim vim editor monospace ansi syntax highlighting code look prompt"),
+    ],
+  },
+  {
+    id: "vim-keys",
+    title: msg("Vim keys"),
+    to: "/settings/appearance",
+    searchTerms: [msg("vim neovim keybindings normal insert mode modal editing composer")],
+  },
+  {
     id: "panel-animations",
     title: msg("Panel animations"),
     to: "/settings/appearance",

@@ -213,6 +213,7 @@ function AssistantMessageMeta({
 
   return (
     <div
+      data-assistant-meta
       className={cn(
         "flex items-center gap-2 text-xs tabular-nums transition-opacity duration-200",
         alwaysVisible
@@ -237,7 +238,9 @@ function AssistantMessageMeta({
       ) : null}
       {!message.streaming && (
         <SharedTooltipTrigger
-          render={<p className="text-muted-foreground text-xs tabular-nums" />}
+          render={
+            <p data-timeline-timestamp className="text-muted-foreground text-xs tabular-nums" />
+          }
           label={formatChatTimestampTooltip(message.updatedAt, ctx.timestampFormat, m)}
         >
           {formatDayAwareTimestamp(message.updatedAt, ctx.timestampFormat, undefined, undefined, m)}

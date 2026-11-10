@@ -99,7 +99,7 @@ export const TimelinePendingApprovalRow = memo(function TimelinePendingApprovalR
                 <T>Waiting for approval</T>
               </span>
               {onRespondToApproval ? (
-                <>
+                <span data-approval-actions className="contents">
                   <span aria-hidden className="text-muted-foreground">
                     ·
                   </span>
@@ -112,7 +112,7 @@ export const TimelinePendingApprovalRow = memo(function TimelinePendingApprovalR
                     options={approval.options}
                     onRespondToApproval={onRespondToApproval}
                   />
-                </>
+                </span>
               ) : null}
             </>
           ) : (

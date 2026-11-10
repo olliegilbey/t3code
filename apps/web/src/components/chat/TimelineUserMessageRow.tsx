@@ -859,7 +859,9 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
         </InlineButton>
       ) : null}
       <SharedTooltipTrigger
-        render={<p className="text-muted-foreground text-xs tabular-nums" />}
+        render={
+          <p data-timeline-timestamp className="text-muted-foreground text-xs tabular-nums" />
+        }
         label={formatChatTimestampTooltip(row.message.createdAt, ctx.timestampFormat, m)}
       >
         {formatDayAwareTimestamp(

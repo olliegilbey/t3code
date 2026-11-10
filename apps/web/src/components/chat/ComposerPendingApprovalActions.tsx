@@ -24,7 +24,7 @@ interface ComposerPendingApprovalActionsProps {
   ) => Promise<unknown>;
 }
 
-const DEFAULT_APPROVAL_OPTIONS = [
+export const DEFAULT_APPROVAL_OPTIONS = [
   {
     decision: "cancel",
     label: msg("Cancel", { $context: "verb, response to an approval request" }),
