@@ -65,6 +65,9 @@ export class DesktopSshEnvironment extends Context.Service<
       target: DesktopSshEnvironmentTarget,
     ) => Effect.Effect<void, DesktopSshEnvironmentOperationError>;
     readonly closeAllTunnels: Effect.Effect<void>;
+    readonly cancelSetup: (
+      target: DesktopSshEnvironmentTarget,
+    ) => Effect.Effect<void, DesktopSshEnvironmentOperationError>;
   }
 >()("@t3tools/desktop/ssh/DesktopSshEnvironment") {}
 
@@ -158,6 +161,13 @@ export const make = Effect.gen(function* () {
       Effect.provide(runtimeContext),
     ),
     closeAllTunnels: manager.closeAllTunnels,
+    cancelSetup: Effect.fn("desktop.ssh.cancelSetup")(
+      function* (target) {
+        return yield* manager.cancelSetup(target);
+      },
+      Effect.provideService(SshAuth.SshPasswordPrompt, passwordPrompt),
+      Effect.provide(runtimeContext),
+    ),
   });
 });
 

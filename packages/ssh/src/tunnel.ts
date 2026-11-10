@@ -13,6 +13,7 @@ import * as NetService from "@t3tools/shared/Net";
 import { extractJsonObject, fromLenientJson } from "@t3tools/shared/schemaJson";
 import { satisfiesSemverRange } from "@t3tools/shared/semver";
 import * as Context from "effect/Context";
+import * as Deferred from "effect/Deferred";
 import * as Digest from "effect/crypto/Digest";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -179,6 +180,10 @@ export interface SshEnvironmentManagerShape {
   ) => Effect.Effect<void, SshEnvironmentEffectError, SshEnvironmentEffectContext>;
   /** Closes every tunnel, as the manager's scope finalizer does. */
   readonly closeAllTunnels: Effect.Effect<void>;
+  /** Stops the target's setup in flight, so the next one runs ssh and asks for login again. */
+  readonly cancelSetup: (
+    target: DesktopSshEnvironmentTarget,
+  ) => Effect.Effect<void, SshEnvironmentEffectError, SshEnvironmentEffectContext>;
 }
 
 const RemoteLaunchResult = Schema.Struct({
@@ -1586,6 +1591,31 @@ const makeSshEnvironmentManager = Effect.fn("ssh/tunnel.SshEnvironmentManager.ma
     return yield* targetLocks.withLock(key, effect);
   });
 
+  // An ssh login can wait for an approval the user never sees, such as a
+  // 1Password prompt that has gone, while it holds the target's lock.
+  const setupCancels = new Map<string, Deferred.Deferred<void>>();
+  const cancellableSetup =
+    (key: string, alias: string) =>
+    <A, E, R>(setup: Effect.Effect<A, E, R>) =>
+      Effect.suspend(() => {
+        const cancel = Deferred.makeUnsafe<void>();
+        setupCancels.set(key, cancel);
+        const stopped = new SshCommandError({
+          command: ["ssh"],
+          exitCode: null,
+          stderr: "",
+          message: `SSH setup for ${alias} stopped so a new one can start.`,
+        });
+        return setup.pipe(
+          Effect.raceFirst(Deferred.await(cancel).pipe(Effect.andThen(Effect.fail(stopped)))),
+          Effect.ensuring(
+            Effect.sync(() => {
+              if (setupCancels.get(key) === cancel) setupCancels.delete(key);
+            }),
+          ),
+        );
+      });
+
   const closeTunnelEntry = Effect.fn("ssh/tunnel.closeTunnelEntry")(function* (
     entry: SshTunnelEntry,
   ) {
@@ -1959,8 +1989,26 @@ const makeSshEnvironmentManager = Effect.fn("ssh/tunnel.SshEnvironmentManager.ma
           remotePort: entry.remotePort,
           ...(entry.remoteServerKind ? { remoteServerKind: entry.remoteServerKind } : {}),
         };
-      }),
+      }).pipe(cancellableSetup(key, resolvedTarget.alias)),
     );
+  });
+
+  const cancelSetup = Effect.fn("ssh/tunnel.cancelSetup")(function* (
+    target: DesktopSshEnvironmentTarget,
+  ): Effect.fn.Return<void, SshEnvironmentEffectError, SshEnvironmentEffectContext> {
+    const baseResolved = yield* resolveSshTarget(target.alias || target.hostname);
+    const key = targetConnectionKey({
+      ...baseResolved,
+      ...(target.username !== null ? { username: target.username } : {}),
+      ...(target.port !== null ? { port: target.port } : {}),
+    });
+    const cancel = setupCancels.get(key);
+    if (cancel === undefined) return;
+    yield* Effect.logInfo("ssh.environment.setup.cancelled", {
+      ...sshTargetLogFields(target),
+      key,
+    });
+    yield* Deferred.succeed(cancel, undefined);
   });
 
   const disconnectEnvironment = Effect.fn("ssh/tunnel.disconnectEnvironment")(function* (
@@ -2003,7 +2051,12 @@ const makeSshEnvironmentManager = Effect.fn("ssh/tunnel.SshEnvironmentManager.ma
     );
   });
 
-  return SshEnvironmentManager.of({ ensureEnvironment, disconnectEnvironment, closeAllTunnels });
+  return SshEnvironmentManager.of({
+    ensureEnvironment,
+    disconnectEnvironment,
+    closeAllTunnels,
+    cancelSetup,
+  });
 });
 
 /**

@@ -195,19 +195,18 @@ export function useSystemComposerBanners(input: SystemComposerBannersInput) {
         ) : undefined,
         actions: (
           <>
-            {unavailableConnection.phase !== "connecting" ? (
-              <Button
-                size="xs"
-                variant="ghost"
-                onClick={() =>
-                  void handleReconnectActiveEnvironmentStable(
-                    activeEnvironmentUnavailableState.environmentId,
-                  )
-                }
-              >
-                {environmentReconnecting ? "Retry now" : "Reconnect"}
-              </Button>
-            ) : null}
+            {/* Also while connecting: an SSH login can wait on a prompt that has gone. */}
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={() =>
+                void handleReconnectActiveEnvironmentStable(
+                  activeEnvironmentUnavailableState.environmentId,
+                )
+              }
+            >
+              {environmentReconnecting ? "Retry now" : "Reconnect"}
+            </Button>
             {disconnectAction}
           </>
         ),

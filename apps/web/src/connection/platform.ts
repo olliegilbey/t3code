@@ -410,6 +410,21 @@ const layerCapabilities = Layer.effectContext(
             }),
         });
       }),
+      cancelSetup: Effect.fn("web.connectionPlatform.ssh.cancelSetup")(function* (target) {
+        const bridge = window.desktopBridge;
+        if (bridge === undefined) {
+          return;
+        }
+        pendingSshSetups.delete(sshTargetKey(target));
+        yield* Effect.tryPromise({
+          try: () => bridge.cancelSshEnvironmentSetup(target),
+          catch: (cause) =>
+            new ConnectionTransientError({
+              reason: "remote-unavailable",
+              detail: `Could not stop the SSH setup: ${String(cause)}`,
+            }),
+        });
+      }),
     });
 
     return Context.make(ClientCapabilities.CloudSession, cloudSession).pipe(
