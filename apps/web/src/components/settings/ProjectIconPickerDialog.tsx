@@ -1,5 +1,6 @@
 import * as Schema from "effect/Schema";
 import { deriveProjectIdentity } from "../../projectIdentity";
+import { useTerminalMode } from "../../terminalMode";
 import { ProjectMonogram } from "../ProjectMonogram";
 import {
   ProjectMonogramText,
@@ -88,12 +89,14 @@ function ProjectIconPickerBody({
   const gt = useGT();
   const m = useMessages();
   const automatic = deriveProjectIdentity(projectName);
+  // Only Terminal mode shows an emoji project's color, so only it offers the picker for one.
+  const terminalMode = useTerminalMode();
   const [mode, setMode] = useState<ProjectIconOverride["kind"]>(current?.kind ?? "lucide");
   const [iconName, setIconName] = useState<string>(
     current?.kind === "lucide" ? current.name : DEFAULT_ICON,
   );
   const [color, setColor] = useState<ProjectIconColor>(
-    current && current.kind !== "emoji" ? current.color : automatic.color,
+    (current && "color" in current ? current.color : undefined) ?? automatic.color,
   );
   const [letters, setLetters] = useState(
     current?.kind === "monogram" ? current.text : automatic.monogram,
@@ -113,7 +116,7 @@ function ProjectIconPickerBody({
         ? { kind: "monogram", text: monogram, color }
         : mode === "lucide"
           ? { kind: "lucide", name: iconName, color }
-          : { kind: "emoji", emoji },
+          : { kind: "emoji", emoji, color },
     );
     onClose();
   };
@@ -149,7 +152,7 @@ function ProjectIconPickerBody({
           </Toggle>
         </ToggleGroup>
 
-        {mode !== "emoji" ? (
+        {mode !== "emoji" || terminalMode ? (
           <div>
             <div className="mb-2 text-xs font-medium text-muted-foreground">
               <T>Color</T>
