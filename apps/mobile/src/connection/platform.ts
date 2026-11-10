@@ -249,6 +249,9 @@ const layerCapabilities = Layer.effectContext(
           disconnect: Effect.fn("ClientCapabilities.SshEnvironmentGateway.disconnect")(
             () => Effect.void,
           ),
+          cancelSetup: Effect.fn("ClientCapabilities.SshEnvironmentGateway.cancelSetup")(
+            () => Effect.void,
+          ),
         }),
       ),
     );
