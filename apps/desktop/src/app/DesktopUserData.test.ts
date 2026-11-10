@@ -2,6 +2,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
+import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 
 import { resolveUserDataPath } from "./DesktopUserData.ts";
@@ -39,4 +40,22 @@ it.effect.each(["t3code", "T3 Code (Alpha)"])(
         "existing V2 state",
       );
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "uses the profile folder T3CODE_DESKTOP_PROFILE names, so a second build can run beside this one",
+  () =>
+    Effect.gen(function* () {
+      const path = yield* Path.Path;
+      const resolved = yield* resolveUserDataPath({
+        appDataDirectory: "/Users/alice/Library/Application Support",
+        isDevelopment: false,
+        platform: "darwin",
+        userDataProfile: Option.some("t3code-terminal"),
+      });
+      assert.equal(
+        resolved,
+        path.join("/Users/alice/Library/Application Support", "t3code-terminal"),
+      );
+    }).pipe(Effect.provide(NodeServices.layer)),
 );
