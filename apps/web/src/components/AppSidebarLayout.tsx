@@ -502,7 +502,7 @@ export function AppSidebarLayout({
         {children}
         <BackgroundThreadAnnouncer />
         <SidebarControl showSidebar={showSidebar} />
-        {isElectron ? <HistorySwipeNavigation /> : null}
+        <HistorySwipeNavigation history={isElectron} />
       </SidebarProvider>
     </PanelAnimationSuppressionProvider>
   );

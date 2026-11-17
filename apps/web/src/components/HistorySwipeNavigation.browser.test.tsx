@@ -1,15 +1,30 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import { render } from "../../test/render";
-import { HistorySwipeNavigation } from "./HistorySwipeNavigation";
+import { HistorySwipeNavigation, registerSwipeTarget } from "./HistorySwipeNavigation";
 
 const navigateHistory = vi.hoisted(() => vi.fn());
 vi.mock("../navigationHistory", () => ({ canNavigateHistory: () => true, navigateHistory }));
 
+// Chromium's wheelDeltaX for a trackpad is -3 × deltaX; for a mouse wheel it counts notches.
+function trackpadWheel(deltaX: number, deltaY = 0) {
+  const init = {
+    deltaX,
+    deltaY,
+    wheelDeltaX: Math.trunc(-3 * deltaX),
+    wheelDeltaY: Math.trunc(-3 * deltaY),
+  };
+  return new WheelEvent("wheel", { ...init, bubbles: true, composed: true });
+}
+
+function mouseTilt(direction: "left" | "right") {
+  const deltaX = direction === "left" ? -4 : 4;
+  const init = { deltaX, wheelDeltaX: direction === "left" ? 120 : -120 };
+  return new WheelEvent("wheel", { ...init, bubbles: true, composed: true });
+}
+
 function swipe(target: Element, deltaX: number) {
-  for (const delta of [deltaX, 0]) {
-    target.dispatchEvent(new WheelEvent("wheel", { deltaX: delta, bubbles: true, composed: true }));
-  }
+  for (const delta of [deltaX, 0]) target.dispatchEvent(trackpadWheel(delta));
 }
 
 describe("HistorySwipeNavigation", () => {
@@ -42,13 +57,13 @@ describe("HistorySwipeNavigation", () => {
 
     if (scroller === "closed-dialog") {
       panel.setAttribute("role", "dialog");
-      content.dispatchEvent(new WheelEvent("wheel", { deltaX: -1, bubbles: true, composed: true }));
+      content.dispatchEvent(trackpadWheel(-1));
       panel.remove();
       screen.container.appendChild(viewport);
     }
 
     if (scroller === "shadow-remount") {
-      content.dispatchEvent(new WheelEvent("wheel", { deltaX: 1, bubbles: true, composed: true }));
+      content.dispatchEvent(trackpadWheel(1));
       const replacement = viewport.cloneNode(true) as HTMLDivElement;
       viewport.replaceWith(replacement);
       replacement.scrollLeft = scrollLeft;
@@ -96,11 +111,94 @@ describe("HistorySwipeNavigation", () => {
     await using screen = await render(<HistorySwipeNavigation />);
     const panel = screen.container.appendChild(document.createElement("div"));
     for (const [deltaX, deltaY] of [...events, [0, 0] as const]) {
-      panel.dispatchEvent(
-        new WheelEvent("wheel", { deltaX, deltaY, bubbles: true, composed: true }),
-      );
+      panel.dispatchEvent(trackpadWheel(deltaX, deltaY));
     }
 
     expect(navigateHistory).toHaveBeenCalledTimes(navigates ? 1 : 0);
+  });
+
+  it.each([
+    ["a swipe over a swipe target goes to the target, not history", true],
+    ["a swipe the target cannot take keeps the thread", false],
+  ])("%s", async (_name, canSwipe) => {
+    navigateHistory.mockReset();
+    using _platform = vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+    await using screen = await render(<HistorySwipeNavigation />);
+    const panel = screen.container.appendChild(document.createElement("div"));
+    const row = panel.appendChild(document.createElement("div"));
+    const swipeTo = vi.fn();
+    using _target = {
+      [Symbol.dispose]: registerSwipeTarget(panel, { canSwipe: () => canSwipe, swipe: swipeTo }),
+    };
+
+    swipe(row, -130);
+
+    expect(swipeTo.mock.calls).toEqual(canSwipe ? [["back"]] : []);
+    expect(navigateHistory).not.toHaveBeenCalled();
+  });
+
+  it("a long swipe over a swipe target steps as it travels, and steps back when it reverses", async () => {
+    using _platform = vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+    await using screen = await render(<HistorySwipeNavigation />);
+    const panel = screen.container.appendChild(document.createElement("div"));
+    const swipeTo = vi.fn();
+    using _target = {
+      [Symbol.dispose]: registerSwipeTarget(panel, { canSwipe: () => true, swipe: swipeTo }),
+    };
+
+    for (const deltaX of [
+      ...Array.from({ length: 12 }, () => 40),
+      ...Array.from({ length: 6 }, () => -40),
+    ]) {
+      panel.dispatchEvent(trackpadWheel(deltaX));
+    }
+
+    expect(swipeTo.mock.calls).toEqual([["forward"], ["forward"], ["forward"], ["back"]]);
+  });
+
+  it("off the macOS desktop app, swipes step a target once each, and never navigate", async () => {
+    navigateHistory.mockReset();
+    using _platform = vi.spyOn(navigator, "platform", "get").mockReturnValue("Linux x86_64");
+    await using screen = await render(<HistorySwipeNavigation history={false} />);
+    const panel = screen.container.appendChild(document.createElement("div"));
+    const outside = screen.container.appendChild(document.createElement("div"));
+    const swipeTo = vi.fn();
+    using _target = {
+      [Symbol.dispose]: registerSwipeTarget(panel, { canSwipe: () => true, swipe: swipeTo }),
+    };
+
+    // No zero-delta event ends these swipes; only the pause between them does.
+    for (const [element, start] of [
+      [panel, 0],
+      [panel, 1000],
+      [outside, 2000],
+    ] as const) {
+      for (const offset of [0, 16, 32]) {
+        const event = trackpadWheel(-40);
+        Object.defineProperty(event, "timeStamp", { value: start + offset });
+        element.dispatchEvent(event);
+      }
+    }
+
+    expect(swipeTo.mock.calls).toEqual([["back"], ["back"]]);
+    expect(navigateHistory).not.toHaveBeenCalled();
+  });
+
+  it("a mouse tilt click over a swipe target steps once, however long it is held", async () => {
+    navigateHistory.mockReset();
+    using _platform = vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+    await using screen = await render(<HistorySwipeNavigation />);
+    const panel = screen.container.appendChild(document.createElement("div"));
+    const swipeTo = vi.fn();
+    using _target = {
+      [Symbol.dispose]: registerSwipeTarget(panel, { canSwipe: () => true, swipe: swipeTo }),
+    };
+
+    for (const direction of ["right", "right", "right", "left"] as const) {
+      panel.dispatchEvent(mouseTilt(direction));
+    }
+
+    expect(swipeTo.mock.calls).toEqual([["forward"], ["back"]]);
+    expect(navigateHistory).not.toHaveBeenCalled();
   });
 });
