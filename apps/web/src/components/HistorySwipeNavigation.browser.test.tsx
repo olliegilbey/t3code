@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import { render } from "../../test/render";
-import { HistorySwipeNavigation } from "./HistorySwipeNavigation";
+import { HistorySwipeNavigation, registerSwipeTarget } from "./HistorySwipeNavigation";
 
 const navigateHistory = vi.hoisted(() => vi.fn());
 vi.mock("../navigationHistory", () => ({ canNavigateHistory: () => true, navigateHistory }));
@@ -102,5 +102,44 @@ describe("HistorySwipeNavigation", () => {
     }
 
     expect(navigateHistory).toHaveBeenCalledTimes(navigates ? 1 : 0);
+  });
+
+  it.each([
+    ["a swipe over a swipe target goes to the target, not history", true],
+    ["a swipe the target cannot take keeps the thread", false],
+  ])("%s", async (_name, canSwipe) => {
+    navigateHistory.mockReset();
+    using _platform = vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+    await using screen = await render(<HistorySwipeNavigation />);
+    const panel = screen.container.appendChild(document.createElement("div"));
+    const row = panel.appendChild(document.createElement("div"));
+    const swipeTo = vi.fn();
+    using _target = {
+      [Symbol.dispose]: registerSwipeTarget(panel, { canSwipe: () => canSwipe, swipe: swipeTo }),
+    };
+
+    swipe(row, -130);
+
+    expect(swipeTo.mock.calls).toEqual(canSwipe ? [["back"]] : []);
+    expect(navigateHistory).not.toHaveBeenCalled();
+  });
+
+  it("a long swipe over a swipe target steps as it travels, and steps back when it reverses", async () => {
+    using _platform = vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+    await using screen = await render(<HistorySwipeNavigation />);
+    const panel = screen.container.appendChild(document.createElement("div"));
+    const swipeTo = vi.fn();
+    using _target = {
+      [Symbol.dispose]: registerSwipeTarget(panel, { canSwipe: () => true, swipe: swipeTo }),
+    };
+
+    for (const deltaX of [
+      ...Array.from({ length: 12 }, () => 40),
+      ...Array.from({ length: 6 }, () => -40),
+    ]) {
+      panel.dispatchEvent(new WheelEvent("wheel", { deltaX, bubbles: true, composed: true }));
+    }
+
+    expect(swipeTo.mock.calls).toEqual([["forward"], ["forward"], ["forward"], ["back"]]);
   });
 });

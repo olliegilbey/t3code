@@ -12,13 +12,37 @@ const SWIPE_AXIS_LOCK_DISTANCE = 8;
 const SWIPE_HORIZONTAL_DOMINANCE = 2;
 const SWIPE_DOMINANCE_DISTANCE = 30;
 const MOMENTUM_SAMPLE_SIZE = 5;
+// A swipe over a target steps as the fingers travel: one step after a short pull, then one per
+// stretch, so a flick takes one step and a long swipe several. Stepping back needs some slack.
+const TARGET_FIRST_STEP_DISTANCE = 80;
+const TARGET_STEP_DISTANCE = 200;
+const TARGET_STEP_BACK_SLACK = 40;
 
 type SwipeBounds = { left: number; top: number; width: number; height: number };
+
+/** An element that claims swipes made over it, instead of history navigation, one step at a time. */
+export interface SwipeTarget {
+  canSwipe: (direction: HistoryDirection) => boolean;
+  swipe: (direction: HistoryDirection) => void;
+}
+const swipeTargets = new WeakMap<Element, SwipeTarget>();
+
+/** Returns the unregister function, so it can be a ref callback's cleanup. */
+export function registerSwipeTarget(element: Element, target: SwipeTarget): () => void {
+  swipeTargets.set(element, target);
+  return () => {
+    if (swipeTargets.get(element) === target) swipeTargets.delete(element);
+  };
+}
+
 type SwipeGesture =
   | { kind: "pending"; path: EventTarget[]; y: number; sumX: number; sumY: number }
   | {
       kind: "tracking";
       direction: HistoryDirection;
+      // Looked up per step: a step re-renders the target, which registers fresh handlers.
+      targetElement: Element | null;
+      steps: number;
       distance: number;
       deltas: number[];
       travelX: number;
@@ -76,10 +100,18 @@ function lockSwipeAxis(
   }
   if (canScrollHorizontally(path, sumX)) return { kind: "ignored" };
   const direction = sumX < 0 ? "back" : "forward";
-  if (!canNavigateHistory(direction)) return { kind: "ignored" };
+  const targetElement = path.find(
+    (node): node is Element => node instanceof Element && swipeTargets.has(node),
+  );
+  const target = targetElement ? swipeTargets.get(targetElement)! : null;
+  if (!(target ? target.canSwipe(direction) : canNavigateHistory(direction))) {
+    return { kind: "ignored" };
+  }
   return {
     kind: "tracking",
     direction,
+    targetElement: targetElement ?? null,
+    steps: 0,
     distance: Math.abs(sumX),
     deltas: [],
     travelX: Math.abs(sumX),
@@ -87,6 +119,25 @@ function lockSwipeAxis(
     y: pending.y,
     bounds: readMainContentBounds(),
   };
+}
+
+/** Steps a swipe over a target has taken once its fingers travelled `distance`. */
+function swipeTargetSteps(distance: number): number {
+  if (distance < TARGET_FIRST_STEP_DISTANCE) return 0;
+  return 1 + Math.floor((distance - TARGET_FIRST_STEP_DISTANCE) / TARGET_STEP_DISTANCE);
+}
+
+// One step per wheel event, so each step sees the target's handlers from after the last one.
+function stepSwipeTarget(gesture: Extract<SwipeGesture, { kind: "tracking" }>) {
+  const target = gesture.targetElement ? swipeTargets.get(gesture.targetElement) : undefined;
+  if (!target) return;
+  if (swipeTargetSteps(gesture.distance) > gesture.steps) {
+    target.swipe(gesture.direction);
+    gesture.steps += 1;
+  } else if (swipeTargetSteps(gesture.distance + TARGET_STEP_BACK_SLACK) < gesture.steps) {
+    target.swipe(gesture.direction === "back" ? "forward" : "back");
+    gesture.steps -= 1;
+  }
 }
 
 /**
@@ -105,7 +156,8 @@ export function isMomentumTail(deltas: readonly number[]): boolean {
 }
 
 /**
- * Two-finger horizontal trackpad swipes go back and forward, like a browser.
+ * Two-finger horizontal trackpad swipes go back and forward, like a browser,
+ * unless they start over a registered swipe target, which steps instead.
  * macOS only: on Windows and Linux a mouse tilt wheel is indistinguishable from a trackpad swipe.
  */
 export function HistorySwipeNavigation() {
@@ -118,8 +170,13 @@ export function HistorySwipeNavigation() {
     const hideIndicator = () =>
       setSwipe((current) => (current === null ? null : { ...current, tracking: false }));
     // The fingers lifted: navigate if the swipe went far enough, then ignore its momentum.
+    // A target already stepped while the fingers moved.
     const release = () => {
-      if (gesture?.kind === "tracking" && gesture.distance >= SWIPE_TRIGGER_DISTANCE) {
+      if (
+        gesture?.kind === "tracking" &&
+        gesture.targetElement === null &&
+        gesture.distance >= SWIPE_TRIGGER_DISTANCE
+      ) {
         navigateHistory(gesture.direction);
       }
       gesture = { kind: "ignored" };
@@ -160,6 +217,7 @@ export function HistorySwipeNavigation() {
         if (isMomentumTail(gesture.deltas)) return release();
         gesture.distance = Math.max(0, gesture.distance + delta);
       }
+      if (gesture.targetElement !== null) return stepSwipeTarget(gesture);
       setSwipe({
         direction: gesture.direction,
         progress: Math.min(1, gesture.distance / SWIPE_TRIGGER_DISTANCE),

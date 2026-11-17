@@ -1154,6 +1154,61 @@ export function filterSidebarProjectScopeItems<TItem extends { readonly value: s
   return input.items.filter((item) => item.value !== "all" && input.matches(item, query));
 }
 
+/**
+ * Project scope keys by unsettled thread count, most first, for swiping through scopes.
+ * Projects with none are left out; ties keep the order of `groups`.
+ */
+export function rankProjectScopesByUnsettled(input: {
+  readonly groups: readonly {
+    readonly projectKey: string;
+    readonly memberProjectRefs: readonly {
+      readonly environmentId: string;
+      readonly projectId: string;
+    }[];
+  }[];
+  readonly unsettledThreads: readonly {
+    readonly environmentId: string;
+    readonly projectId: string;
+  }[];
+}): string[] {
+  const scopeKeyByProject = new Map(
+    input.groups.flatMap((group) =>
+      group.memberProjectRefs.map(
+        (ref) => [`${ref.environmentId}:${ref.projectId}`, group.projectKey] as const,
+      ),
+    ),
+  );
+  const counts = new Map<string, number>();
+  for (const thread of input.unsettledThreads) {
+    const scopeKey = scopeKeyByProject.get(`${thread.environmentId}:${thread.projectId}`);
+    if (scopeKey !== undefined) counts.set(scopeKey, (counts.get(scopeKey) ?? 0) + 1);
+  }
+  return input.groups
+    .map((group) => group.projectKey)
+    .filter((key) => counts.has(key))
+    .toSorted((left, right) => counts.get(right)! - counts.get(left)!);
+}
+
+/**
+ * The scope one swipe away along `order`, looping through all projects (`[]`) at both ends.
+ * Any other scope steps in at the start. Null when no project has anything to show.
+ */
+export function resolveSwipedProjectScope(input: {
+  readonly order: readonly string[];
+  readonly scopeKeys: readonly string[];
+  readonly direction: "next" | "previous";
+}): readonly string[] | null {
+  const { order, scopeKeys } = input;
+  if (order.length === 0) return scopeKeys.length === 0 ? null : [];
+  const index = scopeKeys.length === 1 ? order.indexOf(scopeKeys[0]!) : -1;
+  if (input.direction === "previous") {
+    if (scopeKeys.length === 0) return [order.at(-1)!];
+    return index > 0 ? [order[index - 1]!] : [];
+  }
+  const next = order[index + 1];
+  return next === undefined ? [] : [next];
+}
+
 interface SidebarProjectScopeMenuState {
   readonly open: boolean;
   readonly query: string;
