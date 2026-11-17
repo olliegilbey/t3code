@@ -5,7 +5,7 @@ import {
 import * as Schema from "effect/Schema";
 import { FolderPlusIcon } from "lucide-react";
 import { useGT } from "gt-react";
-import { useState, type DragEvent, type ReactNode } from "react";
+import { useState, type DragEvent, type ReactNode, type Ref } from "react";
 
 import { useOpenLocalWorkspace } from "../../hooks/useOpenLocalWorkspace";
 import { randomUUID } from "../../lib/utils";
@@ -27,7 +27,13 @@ function isFileDrag(event: DragEvent) {
  * this zone then stays hidden and only picks up folders from the drop.
  * Browsers expose no absolute paths, so only the desktop app can add them.
  */
-export function SidebarFolderDrop(props: { children: ReactNode }) {
+export function SidebarFolderDrop({
+  children,
+  ref,
+}: {
+  children: ReactNode;
+  ref?: Ref<HTMLDivElement>;
+}) {
   const gt = useGT();
   const [isActive, setIsActive] = useState(false);
   const openLocalWorkspace = useOpenLocalWorkspace();
@@ -95,6 +101,7 @@ export function SidebarFolderDrop(props: { children: ReactNode }) {
 
   return (
     <div
+      ref={ref}
       className="relative flex min-h-0 flex-1 flex-col"
       onDragEnter={onDragOver}
       onDragOver={onDragOver}
@@ -121,7 +128,7 @@ export function SidebarFolderDrop(props: { children: ReactNode }) {
         }
       }}
     >
-      {props.children}
+      {children}
       {isActive ? (
         <div
           aria-hidden
