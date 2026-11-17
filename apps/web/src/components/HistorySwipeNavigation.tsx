@@ -14,11 +14,28 @@ const SWIPE_DOMINANCE_DISTANCE = 30;
 const MOMENTUM_SAMPLE_SIZE = 5;
 
 type SwipeBounds = { left: number; top: number; width: number; height: number };
+
+/** An element that claims swipes made over it, instead of history navigation. */
+export interface SwipeTarget {
+  canSwipe: (direction: HistoryDirection) => boolean;
+  swipe: (direction: HistoryDirection) => void;
+}
+const swipeTargets = new WeakMap<Element, SwipeTarget>();
+
+/** Returns the unregister function, so it can be a ref callback's cleanup. */
+export function registerSwipeTarget(element: Element, target: SwipeTarget): () => void {
+  swipeTargets.set(element, target);
+  return () => {
+    if (swipeTargets.get(element) === target) swipeTargets.delete(element);
+  };
+}
+
 type SwipeGesture =
   | { kind: "pending"; path: EventTarget[]; y: number; sumX: number; sumY: number }
   | {
       kind: "tracking";
       direction: HistoryDirection;
+      target: SwipeTarget | null;
       distance: number;
       deltas: number[];
       travelX: number;
@@ -36,10 +53,9 @@ type SwipeIndicatorState = {
   tracking: boolean;
 };
 
-function readMainContentBounds(): SwipeBounds {
-  const main = document.querySelector('[data-slot="sidebar-inset"]');
-  if (!main) return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
-  const { left, top, width, height } = main.getBoundingClientRect();
+function readBounds(element: Element | null): SwipeBounds {
+  if (!element) return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+  const { left, top, width, height } = element.getBoundingClientRect();
   return { left, top, width, height };
 }
 
@@ -76,16 +92,23 @@ function lockSwipeAxis(
   }
   if (canScrollHorizontally(path, sumX)) return { kind: "ignored" };
   const direction = sumX < 0 ? "back" : "forward";
-  if (!canNavigateHistory(direction)) return { kind: "ignored" };
+  const targetElement = path.find(
+    (node): node is Element => node instanceof Element && swipeTargets.has(node),
+  );
+  const target = targetElement ? swipeTargets.get(targetElement)! : null;
+  if (!(target ? target.canSwipe(direction) : canNavigateHistory(direction))) {
+    return { kind: "ignored" };
+  }
   return {
     kind: "tracking",
     direction,
+    target,
     distance: Math.abs(sumX),
     deltas: [],
     travelX: Math.abs(sumX),
     travelY: Math.abs(sumY),
     y: pending.y,
-    bounds: readMainContentBounds(),
+    bounds: readBounds(targetElement ?? document.querySelector('[data-slot="sidebar-inset"]')),
   };
 }
 
@@ -105,7 +128,8 @@ export function isMomentumTail(deltas: readonly number[]): boolean {
 }
 
 /**
- * Two-finger horizontal trackpad swipes go back and forward, like a browser.
+ * Two-finger horizontal trackpad swipes go back and forward, like a browser,
+ * unless they start over a registered swipe target.
  * macOS only: on Windows and Linux a mouse tilt wheel is indistinguishable from a trackpad swipe.
  */
 export function HistorySwipeNavigation() {
@@ -120,7 +144,8 @@ export function HistorySwipeNavigation() {
     // The fingers lifted: navigate if the swipe went far enough, then ignore its momentum.
     const release = () => {
       if (gesture?.kind === "tracking" && gesture.distance >= SWIPE_TRIGGER_DISTANCE) {
-        navigateHistory(gesture.direction);
+        if (gesture.target) gesture.target.swipe(gesture.direction);
+        else navigateHistory(gesture.direction);
       }
       gesture = { kind: "ignored" };
       hideIndicator();
