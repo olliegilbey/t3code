@@ -192,6 +192,8 @@ import {
   ADD_PROJECT_SCOPE_ITEM_VALUE,
   filterSidebarProjectScopeItems,
   firstValidTimestampMs,
+  rankProjectScopesByUnsettled,
+  resolveSwipedProjectScope,
   isSidebarNestedLinkClick,
   isTrailingDoubleClick,
   orderItemsByPreferredIds,
@@ -260,6 +262,9 @@ import {
 import { SidebarContent, SidebarGroup, useSidebar } from "./ui/sidebar";
 import { SidebarChromeFooter, SidebarChromeHeader } from "./sidebar/SidebarChrome";
 import { SidebarHeaderIconButton, SidebarThreadHeader } from "./sidebar/SidebarThreadHeader";
+import { SidebarProjectScopeBar } from "./sidebar/SidebarProjectScopeBar";
+import { registerSwipeTarget } from "./HistorySwipeNavigation";
+import type { HistoryDirection } from "../navigationHistory";
 import { TooltipProvider, TooltipScrollDismissArea } from "./ui/tooltip";
 import {
   composerDraftHasUserContent,
@@ -632,6 +637,20 @@ function useSidebarThreads(input: {
       ),
     ]),
   };
+}
+
+// Mirrors partitionSidebarThreads: a thread is unsettled outside the Settled and Snoozed shelves.
+function unsettledSidebarThreads(
+  threads: readonly EnvironmentThreadShell[],
+  delegatedUnderParent: ReadonlySet<string>,
+  serverConfigs: ReadonlyMap<EnvironmentId, EnvironmentServerConfig>,
+) {
+  const now = new Date().toISOString();
+  return filterSidebarV2VisibleThreads(threads, null, delegatedUnderParent).filter(
+    (thread) =>
+      !serverConfigs.has(thread.environmentId) ||
+      (thread.settledOverride !== "settled" && !effectiveSnoozed(thread, { now })),
+  );
 }
 
 function partitionSidebarThreads(input: SidebarThreadPartitionInput) {
@@ -1097,9 +1116,15 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
 
   // A selection made under one scope can hold threads the next scope hides.
   // The viewport outlives the scope and does not anchor, so a new list starts at the top.
-  const setProjectScopeKeys = (keys: readonly string[]) => {
+  // Swiping walks an order frozen at the first swipe, so settling threads mid-walk does not reshuffle it.
+  const [scopeSwipeOrder, setScopeSwipeOrder] = useState<readonly string[] | null>(null);
+  const setProjectScopeKeys = (
+    keys: readonly string[],
+    swipeOrder: readonly string[] | null = null,
+  ) => {
     clearSelection();
     setPersistedProjectScopeKeys(keys);
+    setScopeSwipeOrder(swipeOrder);
     scrollSidebarToTop(sidebarContentRef.current);
   };
   // A scope whose project is gone reads as all projects once every snapshot has
@@ -1205,6 +1230,33 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       projectScopeFilter.contains(item, query, (candidate) => candidate.label),
   });
   const scopedProjectGroups = revealWidensScope ? [] : chosenProjectGroups;
+  const swipeOrderInUse = projectScopeKeys.length > 0 ? scopeSwipeOrder : null;
+  const scopeSwipePosition =
+    swipeOrderInUse !== null && projectScopeKeys.length === 1
+      ? { index: swipeOrderInUse.indexOf(projectScopeKeys[0]!) + 1, count: swipeOrderInUse.length }
+      : null;
+  const projectScopeSwipeOrder = () =>
+    swipeOrderInUse ??
+    rankProjectScopesByUnsettled({
+      groups: scopeGroups,
+      unsettledThreads: unsettledSidebarThreads(threads, delegatedUnderParent, serverConfigs),
+    });
+  // Fingers moving left (a history "forward" swipe) step to the next busiest project.
+  const swipedProjectScope = (order: readonly string[], direction: HistoryDirection) =>
+    resolveSwipedProjectScope({
+      order,
+      scopeKeys: projectScopeKeys,
+      direction: direction === "forward" ? "next" : "previous",
+    });
+  const registerProjectScopeSwipe = (element: HTMLDivElement) =>
+    registerSwipeTarget(element, {
+      canSwipe: (direction) => swipedProjectScope(projectScopeSwipeOrder(), direction) !== null,
+      swipe: (direction) => {
+        const order = projectScopeSwipeOrder();
+        const keys = swipedProjectScope(order, direction);
+        if (keys !== null) setProjectScopeKeys(keys, keys.length === 0 ? null : order);
+      },
+    });
   const scopedProjectRefs = scopedProjectGroups.flatMap((project) => project.memberProjectRefs);
   const scopedProjectKeys = revealWidensScope ? null : chosenScopeProjectKeys;
   const threadSearch = useThreadSearch(
@@ -3083,7 +3135,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       : undefined);
   const newThreadInProjectShortcutLabel = shortcutLabelForCommand(keybindings, "chat.newLocal");
   return (
-    <SidebarFolderDrop>
+    <SidebarFolderDrop ref={registerProjectScopeSwipe}>
       <SidebarChromeHeader isElectron={isElectron} />
       <SidebarContent
         ref={sidebarContentRef}
@@ -3338,6 +3390,13 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
               activeSearchResultIndex={activeSearchResultIndex}
               onClearSearch={clearThreadSearch}
             />
+            {scopedProjectGroups.length > 0 ? (
+              <SidebarProjectScopeBar
+                projects={scopedProjectGroups}
+                position={scopeSwipePosition}
+                onReset={() => setProjectScopeKeys([])}
+              />
+            ) : null}
           </SidebarGroup>
         }
       >
