@@ -36,6 +36,8 @@ import {
   groupSidebarThreadsByProject,
   resolveSidebarFolderDot,
   sidebarFolderExpansionKeys,
+  rankProjectScopesByUnsettled,
+  resolveSwipedProjectScope,
 } from "./Sidebar.logic";
 import { scopeThreadRef, scopedThreadKey } from "@t3tools/client-runtime/environment";
 import {
@@ -931,6 +933,47 @@ describe("resolveSidebarSweepKeys", () => {
   it("leaves out rows that cannot settle and rows that left the list", () => {
     expect(resolveSidebarSweepKeys(ordered, "c", "blocked", canSettle)).toEqual(["c", "d"]);
     expect(resolveSidebarSweepKeys(ordered, "gone", "a", canSettle)).toEqual([]);
+  });
+});
+
+describe("swiping through project scopes", () => {
+  it("ranks projects by unsettled threads, grouped across environments, and skips empty ones", () => {
+    const group = (projectKey: string, ...refs: string[]) => ({
+      projectKey,
+      memberProjectRefs: refs.map((ref) => {
+        const [environmentId, projectId] = ref.split(":") as [string, string];
+        return { environmentId, projectId };
+      }),
+    });
+    const thread = (ref: string) => {
+      const [environmentId, projectId] = ref.split(":") as [string, string];
+      return { environmentId, projectId };
+    };
+    expect(
+      rankProjectScopesByUnsettled({
+        groups: [group("quiet", "e1:q"), group("tied", "e1:t"), group("busy", "e1:b", "e2:b")],
+        unsettledThreads: ["e1:t", "e1:b", "e2:b", "e1:x"].map(thread),
+      }),
+    ).toEqual(["busy", "tied"]);
+  });
+
+  it.each([
+    [[], "next", ["a"]],
+    [[], "previous", ["c"]],
+    [["a"], "next", ["b"]],
+    [["a"], "previous", []],
+    [["b"], "previous", ["a"]],
+    [["c"], "next", []],
+    [["gone"], "next", ["a"]],
+    [["a", "b"], "previous", []],
+  ] as const)("from %j, %s goes to %j", (scopeKeys, direction, expected) => {
+    expect(resolveSwipedProjectScope({ order: ["a", "b", "c"], scopeKeys, direction })).toEqual(
+      expected,
+    );
+  });
+
+  it("stays on all projects when no project has unsettled threads", () => {
+    expect(resolveSwipedProjectScope({ order: [], scopeKeys: [], direction: "next" })).toBeNull();
   });
 });
 
