@@ -1193,8 +1193,8 @@ export function rankProjectScopesByUnsettled(input: {
 }
 
 /**
- * The scope one swipe away along `order`, or null when there is nothing further.
- * All projects (`[]`) sits before the first; any other scope steps in at the start.
+ * The scope one swipe away along `order`, looping through all projects (`[]`) at both ends.
+ * Any other scope steps in at the start. Null when no project has anything to show.
  */
 export function resolveSwipedProjectScope(input: {
   readonly order: readonly string[];
@@ -1202,13 +1202,14 @@ export function resolveSwipedProjectScope(input: {
   readonly direction: "next" | "previous";
 }): readonly string[] | null {
   const { order, scopeKeys } = input;
+  if (order.length === 0) return scopeKeys.length === 0 ? null : [];
   const index = scopeKeys.length === 1 ? order.indexOf(scopeKeys[0]!) : -1;
   if (input.direction === "previous") {
-    if (scopeKeys.length === 0) return null;
+    if (scopeKeys.length === 0) return [order.at(-1)!];
     return index > 0 ? [order[index - 1]!] : [];
   }
   const next = order[index + 1];
-  return next === undefined ? null : [next];
+  return next === undefined ? [] : [next];
 }
 
 interface SidebarProjectScopeMenuState {

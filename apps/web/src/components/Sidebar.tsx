@@ -1217,12 +1217,12 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       groups: scopeGroups,
       unsettledThreads: unsettledSidebarThreads(threads, delegatedUnderParent, serverConfigs),
     });
-  // Fingers moving right (a history "back" swipe) step to the next busiest project.
+  // Fingers moving left (a history "forward" swipe) step to the next busiest project.
   const swipedProjectScope = (order: readonly string[], direction: HistoryDirection) =>
     resolveSwipedProjectScope({
       order,
       scopeKeys: projectScopeKeys,
-      direction: direction === "back" ? "next" : "previous",
+      direction: direction === "forward" ? "next" : "previous",
     });
   const registerProjectScopeSwipe = (element: HTMLDivElement) =>
     registerSwipeTarget(element, {

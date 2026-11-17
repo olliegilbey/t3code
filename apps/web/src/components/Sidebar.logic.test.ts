@@ -937,17 +937,21 @@ describe("swiping through project scopes", () => {
 
   it.each([
     [[], "next", ["a"]],
-    [[], "previous", null],
+    [[], "previous", ["c"]],
     [["a"], "next", ["b"]],
     [["a"], "previous", []],
     [["b"], "previous", ["a"]],
-    [["c"], "next", null],
+    [["c"], "next", []],
     [["gone"], "next", ["a"]],
     [["a", "b"], "previous", []],
   ] as const)("from %j, %s goes to %j", (scopeKeys, direction, expected) => {
     expect(resolveSwipedProjectScope({ order: ["a", "b", "c"], scopeKeys, direction })).toEqual(
       expected,
     );
+  });
+
+  it("stays on all projects when no project has unsettled threads", () => {
+    expect(resolveSwipedProjectScope({ order: [], scopeKeys: [], direction: "next" })).toBeNull();
   });
 });
 

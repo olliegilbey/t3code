@@ -123,4 +123,23 @@ describe("HistorySwipeNavigation", () => {
     expect(swipeTo.mock.calls).toEqual(canSwipe ? [["back"]] : []);
     expect(navigateHistory).not.toHaveBeenCalled();
   });
+
+  it("a long swipe over a swipe target steps as it travels, and steps back when it reverses", async () => {
+    using _platform = vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+    await using screen = await render(<HistorySwipeNavigation />);
+    const panel = screen.container.appendChild(document.createElement("div"));
+    const swipeTo = vi.fn();
+    using _target = {
+      [Symbol.dispose]: registerSwipeTarget(panel, { canSwipe: () => true, swipe: swipeTo }),
+    };
+
+    for (const deltaX of [
+      ...Array.from({ length: 12 }, () => 40),
+      ...Array.from({ length: 6 }, () => -40),
+    ]) {
+      panel.dispatchEvent(new WheelEvent("wheel", { deltaX, bubbles: true, composed: true }));
+    }
+
+    expect(swipeTo.mock.calls).toEqual([["forward"], ["forward"], ["forward"], ["back"]]);
+  });
 });
