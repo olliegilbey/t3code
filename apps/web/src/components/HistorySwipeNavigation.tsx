@@ -12,13 +12,41 @@ const SWIPE_AXIS_LOCK_DISTANCE = 8;
 const SWIPE_HORIZONTAL_DOMINANCE = 2;
 const SWIPE_DOMINANCE_DISTANCE = 30;
 const MOMENTUM_SAMPLE_SIZE = 5;
+// A swipe over a target steps as the fingers travel: one step after a short pull, then one per
+// stretch, so a flick takes one step and a long swipe several. Stepping back needs some slack.
+const TARGET_FIRST_STEP_DISTANCE = 80;
+const TARGET_STEP_DISTANCE = 200;
+const TARGET_STEP_BACK_SLACK = 40;
+// A held mouse tilt repeats; it steps again only after its events pause this long (ms).
+const MOUSE_TILT_REPEAT_GAP = 200;
+// Where nothing brackets a trackpad scroll, a pause this long between wheel events ends one (ms).
+const WHEEL_GESTURE_GAP = 150;
 
 type SwipeBounds = { left: number; top: number; width: number; height: number };
+
+/** An element that claims swipes made over it, instead of history navigation, one step at a time. */
+export interface SwipeTarget {
+  canSwipe: (direction: HistoryDirection) => boolean;
+  swipe: (direction: HistoryDirection) => void;
+}
+const swipeTargets = new WeakMap<Element, SwipeTarget>();
+
+/** Returns the unregister function, so it can be a ref callback's cleanup. */
+export function registerSwipeTarget(element: Element, target: SwipeTarget): () => void {
+  swipeTargets.set(element, target);
+  return () => {
+    if (swipeTargets.get(element) === target) swipeTargets.delete(element);
+  };
+}
+
 type SwipeGesture =
   | { kind: "pending"; path: EventTarget[]; y: number; sumX: number; sumY: number }
   | {
       kind: "tracking";
       direction: HistoryDirection;
+      // Looked up per step: a step re-renders the target, which registers fresh handlers.
+      targetElement: Element | null;
+      steps: number;
       distance: number;
       deltas: number[];
       travelX: number;
@@ -62,6 +90,7 @@ function isVerticalScroll(travelX: number, travelY: number): boolean {
 
 function lockSwipeAxis(
   pending: Extract<SwipeGesture, { kind: "pending" }>,
+  navigates: boolean,
 ): Exclude<SwipeGesture, { kind: "pending" }> {
   const { path, sumX, sumY } = pending;
   if (Math.abs(sumX) <= Math.abs(sumY) || isVerticalScroll(Math.abs(sumX), Math.abs(sumY))) {
@@ -81,10 +110,16 @@ function lockSwipeAxis(
   }
   if (hasHorizontalScroller(path)) return { kind: "ignored" };
   const direction = sumX < 0 ? "back" : "forward";
-  if (!canNavigateHistory(direction)) return { kind: "ignored" };
+  const targetElement = findSwipeTargetElement(path);
+  const target = targetElement ? swipeTargets.get(targetElement)! : null;
+  if (!(target ? target.canSwipe(direction) : navigates && canNavigateHistory(direction))) {
+    return { kind: "ignored" };
+  }
   return {
     kind: "tracking",
     direction,
+    targetElement: targetElement ?? null,
+    steps: 0,
     distance: Math.abs(sumX),
     deltas: [],
     travelX: Math.abs(sumX),
@@ -92,6 +127,39 @@ function lockSwipeAxis(
     y: pending.y,
     bounds: readMainContentBounds(),
   };
+}
+
+function findSwipeTargetElement(path: readonly EventTarget[]): Element | undefined {
+  return path.find((node): node is Element => node instanceof Element && swipeTargets.has(node));
+}
+
+// Chromium gives a trackpad's wheel events wheelDeltaX = -3 × deltaX (truncated), and a mouse
+// wheel's its raw notches, which breaks that ratio. So a tilt click is a horizontal event that does.
+function mouseTiltDirection(event: WheelEvent): HistoryDirection | null {
+  const { wheelDeltaX = 0 } = event as WheelEvent & { wheelDeltaX?: number };
+  if (event.ctrlKey || wheelDeltaX === 0) return null;
+  if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return null;
+  if (Math.abs(wheelDeltaX + 3 * event.deltaX) < 1) return null;
+  return event.deltaX < 0 ? "back" : "forward";
+}
+
+/** Steps a swipe over a target has taken once its fingers travelled `distance`. */
+function swipeTargetSteps(distance: number): number {
+  if (distance < TARGET_FIRST_STEP_DISTANCE) return 0;
+  return 1 + Math.floor((distance - TARGET_FIRST_STEP_DISTANCE) / TARGET_STEP_DISTANCE);
+}
+
+// One step per wheel event, so each step sees the target's handlers from after the last one.
+function stepSwipeTarget(gesture: Extract<SwipeGesture, { kind: "tracking" }>) {
+  const target = gesture.targetElement ? swipeTargets.get(gesture.targetElement) : undefined;
+  if (!target) return;
+  if (swipeTargetSteps(gesture.distance) > gesture.steps) {
+    target.swipe(gesture.direction);
+    gesture.steps += 1;
+  } else if (swipeTargetSteps(gesture.distance + TARGET_STEP_BACK_SLACK) < gesture.steps) {
+    target.swipe(gesture.direction === "back" ? "forward" : "back");
+    gesture.steps -= 1;
+  }
 }
 
 /**
@@ -110,21 +178,29 @@ export function isMomentumTail(deltas: readonly number[]): boolean {
 }
 
 /**
- * Two-finger horizontal trackpad swipes go back and forward, like a browser.
- * macOS only: on Windows and Linux a mouse tilt wheel is indistinguishable from a trackpad swipe.
+ * A two-finger swipe over a registered swipe target steps it, on every platform. Anywhere else it
+ * goes back or forward, but only with `history` (the desktop app) on macOS: off it nothing
+ * brackets a trackpad scroll, and a mouse tilt wheel is indistinguishable from a swipe.
  */
-export function HistorySwipeNavigation() {
+export function HistorySwipeNavigation({ history = true }: { history?: boolean }) {
   const [swipe, setSwipe] = useState<SwipeIndicatorState | null>(null);
 
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- window wheel and desktop gesture listeners track trackpad swipes
   useEffect(() => {
-    if (!isMacPlatform(navigator.platform)) return;
+    const navigates = history && isMacPlatform(navigator.platform);
     let gesture: SwipeGesture | null = null;
+    let lastWheelAt = 0;
+    let lastTilt: { direction: HistoryDirection; at: number } | null = null;
     const hideIndicator = () =>
       setSwipe((current) => (current === null ? null : { ...current, tracking: false }));
     // The fingers lifted: navigate if the swipe went far enough, then ignore its momentum.
+    // A target already stepped while the fingers moved.
     const release = () => {
-      if (gesture?.kind === "tracking" && gesture.distance >= SWIPE_TRIGGER_DISTANCE) {
+      if (
+        gesture?.kind === "tracking" &&
+        gesture.targetElement === null &&
+        gesture.distance >= SWIPE_TRIGGER_DISTANCE
+      ) {
         navigateHistory(gesture.direction);
       }
       gesture = { kind: "ignored" };
@@ -138,12 +214,34 @@ export function HistorySwipeNavigation() {
       if (gesture?.kind === "tracking") release();
       gesture = null;
     });
+    // A mouse tilt click over a target steps it once; elsewhere it scrolls like any wheel event.
+    const tiltSwipeTarget = (event: WheelEvent): boolean => {
+      const direction = mouseTiltDirection(event);
+      if (direction === null) return false;
+      const path = event.composedPath();
+      const element = findSwipeTargetElement(path);
+      if (!element) return false;
+      const held =
+        direction === lastTilt?.direction && event.timeStamp - lastTilt.at < MOUSE_TILT_REPEAT_GAP;
+      lastTilt = { direction, at: event.timeStamp };
+      const target = swipeTargets.get(element)!;
+      if (!held && !hasHorizontalScroller(path) && target.canSwipe(direction)) {
+        target.swipe(direction);
+      }
+      return true;
+    };
     const onWheel = (event: WheelEvent) => {
+      if (!navigates && gesture !== null && event.timeStamp - lastWheelAt > WHEEL_GESTURE_GAP) {
+        if (gesture.kind === "tracking") release();
+        gesture = null;
+      }
+      lastWheelAt = event.timeStamp;
       if (event.shiftKey) {
         if (gesture?.kind === "tracking") hideIndicator();
         gesture = { kind: "ignored" };
         return;
       }
+      if (tiltSwipeTarget(event)) return;
       if (gesture === null) {
         gesture =
           event.ctrlKey || event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL
@@ -155,7 +253,10 @@ export function HistorySwipeNavigation() {
         gesture.sumX += event.deltaX;
         gesture.sumY += event.deltaY;
         if (Math.abs(gesture.sumX) + Math.abs(gesture.sumY) < SWIPE_AXIS_LOCK_DISTANCE) return;
-        gesture = lockSwipeAxis({ ...gesture, path: [...gesture.path, ...event.composedPath()] });
+        gesture = lockSwipeAxis(
+          { ...gesture, path: [...gesture.path, ...event.composedPath()] },
+          navigates,
+        );
         if (gesture.kind === "ignored") return;
       } else {
         const delta = gesture.direction === "back" ? -event.deltaX : event.deltaX;
@@ -170,6 +271,7 @@ export function HistorySwipeNavigation() {
         if (isMomentumTail(gesture.deltas)) return release();
         gesture.distance = Math.max(0, gesture.distance + delta);
       }
+      if (gesture.targetElement !== null) return stepSwipeTarget(gesture);
       setSwipe({
         direction: gesture.direction,
         progress: Math.min(1, gesture.distance / SWIPE_TRIGGER_DISTANCE),
@@ -184,7 +286,7 @@ export function HistorySwipeNavigation() {
       unsubscribeScrollEnd?.();
       window.removeEventListener("wheel", onWheel, { capture: true });
     };
-  }, []);
+  }, [history]);
 
   return swipe === null ? null : <SwipeIndicator {...swipe} />;
 }
