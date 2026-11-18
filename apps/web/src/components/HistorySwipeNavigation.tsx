@@ -17,6 +17,8 @@ const MOMENTUM_SAMPLE_SIZE = 5;
 const TARGET_FIRST_STEP_DISTANCE = 80;
 const TARGET_STEP_DISTANCE = 200;
 const TARGET_STEP_BACK_SLACK = 40;
+// A held mouse tilt repeats; it steps again only after its events pause this long (ms).
+const MOUSE_TILT_REPEAT_GAP = 200;
 
 type SwipeBounds = { left: number; top: number; width: number; height: number };
 
@@ -100,9 +102,7 @@ function lockSwipeAxis(
   }
   if (canScrollHorizontally(path, sumX)) return { kind: "ignored" };
   const direction = sumX < 0 ? "back" : "forward";
-  const targetElement = path.find(
-    (node): node is Element => node instanceof Element && swipeTargets.has(node),
-  );
+  const targetElement = findSwipeTargetElement(path);
   const target = targetElement ? swipeTargets.get(targetElement)! : null;
   if (!(target ? target.canSwipe(direction) : canNavigateHistory(direction))) {
     return { kind: "ignored" };
@@ -119,6 +119,20 @@ function lockSwipeAxis(
     y: pending.y,
     bounds: readMainContentBounds(),
   };
+}
+
+function findSwipeTargetElement(path: readonly EventTarget[]): Element | undefined {
+  return path.find((node): node is Element => node instanceof Element && swipeTargets.has(node));
+}
+
+// Chromium gives a trackpad's wheel events wheelDeltaX = -3 × deltaX (truncated), and a mouse
+// wheel's its raw notches, which breaks that ratio. So a tilt click is a horizontal event that does.
+function mouseTiltDirection(event: WheelEvent): HistoryDirection | null {
+  const { wheelDeltaX = 0 } = event as WheelEvent & { wheelDeltaX?: number };
+  if (event.ctrlKey || wheelDeltaX === 0) return null;
+  if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return null;
+  if (Math.abs(wheelDeltaX + 3 * event.deltaX) < 1) return null;
+  return event.deltaX < 0 ? "back" : "forward";
 }
 
 /** Steps a swipe over a target has taken once its fingers travelled `distance`. */
@@ -157,7 +171,8 @@ export function isMomentumTail(deltas: readonly number[]): boolean {
 
 /**
  * Two-finger horizontal trackpad swipes go back and forward, like a browser,
- * unless they start over a registered swipe target, which steps instead.
+ * unless they start over a registered swipe target, which steps instead. A mouse tilt click
+ * over a target steps it once.
  * macOS only: on Windows and Linux a mouse tilt wheel is indistinguishable from a trackpad swipe.
  */
 export function HistorySwipeNavigation() {
@@ -167,6 +182,7 @@ export function HistorySwipeNavigation() {
   useEffect(() => {
     if (!isMacPlatform(navigator.platform)) return;
     let gesture: SwipeGesture | null = null;
+    let lastTilt: { direction: HistoryDirection; at: number } | null = null;
     const hideIndicator = () =>
       setSwipe((current) => (current === null ? null : { ...current, tracking: false }));
     // The fingers lifted: navigate if the swipe went far enough, then ignore its momentum.
@@ -190,7 +206,24 @@ export function HistorySwipeNavigation() {
       if (gesture?.kind === "tracking") release();
       gesture = null;
     });
+    // A mouse tilt click over a target steps it once; elsewhere it scrolls like any wheel event.
+    const tiltSwipeTarget = (event: WheelEvent): boolean => {
+      const direction = mouseTiltDirection(event);
+      if (direction === null) return false;
+      const path = event.composedPath();
+      const element = findSwipeTargetElement(path);
+      if (!element) return false;
+      const held =
+        direction === lastTilt?.direction && event.timeStamp - lastTilt.at < MOUSE_TILT_REPEAT_GAP;
+      lastTilt = { direction, at: event.timeStamp };
+      const target = swipeTargets.get(element)!;
+      if (!held && !canScrollHorizontally(path, event.deltaX) && target.canSwipe(direction)) {
+        target.swipe(direction);
+      }
+      return true;
+    };
     const onWheel = (event: WheelEvent) => {
+      if (tiltSwipeTarget(event)) return;
       if (gesture === null) {
         gesture =
           event.ctrlKey || event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL
