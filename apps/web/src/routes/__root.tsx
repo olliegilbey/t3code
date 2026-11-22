@@ -40,6 +40,7 @@ import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { Button } from "../components/ui/button";
 import { StandalonePage, StandalonePageHeader } from "../components/ui/standalone-page";
 import { AnchoredToastProvider, ToastProvider } from "../components/ui/toast";
+import { InlineCodeCopyButton } from "../components/chat/InlineCodeCopyButton";
 import { isElectron } from "../env";
 import { useClientSettings } from "../hooks/useSettings";
 import {
@@ -143,6 +144,7 @@ function RootRouteView() {
     <ToastProvider>
       <AnchoredToastProvider>
         <RootRouteBranch />
+        <InlineCodeCopyButton />
       </AnchoredToastProvider>
     </ToastProvider>
   );
