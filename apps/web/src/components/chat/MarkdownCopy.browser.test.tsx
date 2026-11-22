@@ -4,6 +4,7 @@ import { page, userEvent } from "vite-plus/test/browser";
 import "~/index.css";
 import { render } from "../../../test/render";
 import { CopyableBlockquote } from "./CopyableBlockquote";
+import { InlineCodeCopyButton } from "./InlineCodeCopyButton";
 import { MarkdownCodeBlock } from "./MarkdownCodeBlock";
 import { MarkdownTable } from "./MarkdownTable";
 
@@ -179,5 +180,36 @@ describe("quote copy", () => {
     const html = await (await item?.getType("text/html"))?.text();
     expect(html).toContain("<strong>Monday</strong>");
     expect(html).not.toContain("button");
+  });
+});
+
+describe("inline code copy", () => {
+  it("shows one button beside hovered inline code and copies it without backticks", async () => {
+    await using screen = await render(
+      <>
+        {/* The static HTML ChatMarkdown renders for inline code. */}
+        <div className="chat-markdown">
+          <p>
+            Run <code data-inline-code="">gate --dry-run</code> first.
+          </p>
+        </div>
+        <InlineCodeCopyButton />
+      </>,
+      // The markdown is static and reads no route.
+      { router: false },
+    );
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue();
+    using _clipboard = vi.spyOn(navigator, "clipboard", "get").mockReturnValue({
+      writeText,
+    } as unknown as Clipboard);
+    const copy = page.getByRole("button", { name: "Copy code" });
+
+    await expect.element(copy).not.toBeInTheDocument();
+    await userEvent.hover(screen.getByText("gate --dry-run"));
+    await copy.click();
+    await expect.element(page.getByRole("button", { name: "Copied" })).toBeInTheDocument();
+    expect(writeText).toHaveBeenCalledWith("gate --dry-run");
+    await userEvent.hover(screen.getByText(/first/));
+    await expect.element(page.getByRole("button", { name: "Copied" })).not.toBeInTheDocument();
   });
 });
