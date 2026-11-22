@@ -98,6 +98,7 @@ import {
   renderCodexInlineDirectivesAsMarkdown,
 } from "../markdown/markdownText";
 import { renderSkillInlineMarkdownChildren } from "./chat/SkillInlineText";
+import { MarkdownInlineCode } from "./chat/MarkdownInlineCode";
 import {
   resolveMarkdownMediaPreview,
   type ExpandedImagePreview,
@@ -1616,9 +1617,9 @@ const CHAT_MARKDOWN_COMPONENTS = {
         );
       }
       return (
-        <code {...props} className={className}>
+        <MarkdownInlineCode {...props} className={className} code={codeText}>
           {children}
-        </code>
+        </MarkdownInlineCode>
       );
     }
     return (

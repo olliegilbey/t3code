@@ -5,6 +5,7 @@ import "~/index.css";
 import { render } from "../../../test/render";
 import { CopyableBlockquote } from "./CopyableBlockquote";
 import { MarkdownCodeBlock } from "./MarkdownCodeBlock";
+import { MarkdownInlineCode } from "./MarkdownInlineCode";
 import { MarkdownTable } from "./MarkdownTable";
 
 // Insecure origins (a LAN or tailnet address over plain http) have no async clipboard.
@@ -179,5 +180,28 @@ describe("quote copy", () => {
     const html = await (await item?.getType("text/html"))?.text();
     expect(html).toContain("<strong>Monday</strong>");
     expect(html).not.toContain("button");
+  });
+});
+
+describe("inline code copy", () => {
+  it("shows its button only on hover and copies the code without backticks", async () => {
+    await using screen = await render(
+      <p>
+        Run <MarkdownInlineCode code="gate --dry-run">gate --dry-run</MarkdownInlineCode> first.
+      </p>,
+      // The paragraph renders no links and reads no route.
+      { router: false },
+    );
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue();
+    using _clipboard = vi.spyOn(navigator, "clipboard", "get").mockReturnValue({
+      writeText,
+    } as unknown as Clipboard);
+    const copy = screen.getByRole("button", { name: "Copy code", includeHidden: true });
+
+    await expect.element(copy).not.toBeVisible();
+    await userEvent.hover(screen.getByText("gate --dry-run"));
+    await expect.element(copy).toBeVisible();
+    await copy.click();
+    expect(writeText).toHaveBeenCalledWith("gate --dry-run");
   });
 });
