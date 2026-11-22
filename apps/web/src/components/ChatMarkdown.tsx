@@ -114,6 +114,7 @@ import {
   renderCodexInlineDirectivesAsMarkdown,
 } from "@t3tools/shared/codexMarkdownDirectives";
 import { renderSkillInlineMarkdownChildren } from "./chat/SkillInlineText";
+import { MarkdownInlineCode } from "./chat/MarkdownInlineCode";
 import { MarkdownMath } from "./chat/MarkdownMath";
 import {
   resolveMarkdownMediaPreview,
@@ -1562,9 +1563,9 @@ const CHAT_MARKDOWN_COMPONENTS = {
         );
       }
       return (
-        <code {...props} className={className}>
+        <MarkdownInlineCode {...props} className={className} code={codeText}>
           {children}
-        </code>
+        </MarkdownInlineCode>
       );
     }
     return (
