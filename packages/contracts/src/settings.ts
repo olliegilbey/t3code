@@ -26,7 +26,12 @@ import { UsageLimitSourceId } from "./usageLimitSourceId.ts";
 import { UsageModelFilter } from "./usage.ts";
 import { SecretProviderId, SecretProviderSlug } from "./secretReference.ts";
 import { containsSecretReference, SettingsSecretValue } from "./settingsSecretValue.ts";
-import { EnvironmentMachineKind, ThreadEnvMode, WorktreeSubmodules } from "./environment.ts";
+import {
+  EnvironmentGradient,
+  EnvironmentMachineKind,
+  ThreadEnvMode,
+  WorktreeSubmodules,
+} from "./environment.ts";
 import { KeybindingShortcut } from "./keybindings.ts";
 import {
   CustomModelSetting,
@@ -513,6 +518,8 @@ export const ClientSettingsSchema = Schema.Struct({
   persistComposerContextStrip: Schema.Boolean.pipe(
     Schema.withDecodingDefault(Effect.succeed(false)),
   ),
+  /** Tints each conversation by its environment's gradient. */
+  environmentGradients: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
 
   favorites: ModelFavorites.pipe(Schema.withDecodingDefault(Effect.succeed([]))),
   providerModelPreferences: ProviderModelPreferences.pipe(
@@ -1538,6 +1545,8 @@ export const ServerSettings = Schema.Struct({
   environmentIcon: ForwardCompatibleNullable(EnvironmentMachineKind).pipe(
     Schema.withDecodingDefault(Effect.succeed(null)),
   ),
+  /** Null lets each client pick a default from its order of environments. */
+  environmentGradient: OmittedWhenNull(EnvironmentGradient),
   /** Null inherits t3.json, then local; omit it on the wire for older clients requiring a literal. */
   defaultThreadEnvMode: OmittedWhenNull(ThreadEnvMode),
   newWorktreesStartFromOrigin: Schema.Boolean.pipe(
@@ -1958,6 +1967,7 @@ export const ServerSettingsPatch = Schema.Struct({
   defaultAppearance: Schema.optionalKey(DefaultAppearancePreference),
   defaultAppearanceSetAt: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(64))),
   environmentIcon: Schema.optionalKey(Schema.NullOr(EnvironmentMachineKind)),
+  environmentGradient: Schema.optionalKey(Schema.NullOr(EnvironmentGradient)),
   defaultThreadEnvMode: Schema.optionalKey(Schema.NullOr(ThreadEnvMode)),
   newWorktreesStartFromOrigin: Schema.optionalKey(Schema.Boolean),
   worktreeSubmodules: Schema.optionalKey(Schema.NullOr(WorktreeSubmodules)),
@@ -2113,6 +2123,7 @@ export const ClientSettingsPatch = Schema.Struct({
   fontFamilyTerminal: Schema.optionalKey(FontFamilyPreference),
   fontSmoothing: Schema.optionalKey(Schema.Boolean),
   persistComposerContextStrip: Schema.optionalKey(Schema.Boolean),
+  environmentGradients: Schema.optionalKey(Schema.Boolean),
   favorites: Schema.optionalKey(ModelFavorites),
   providerModelPreferences: Schema.optionalKey(ProviderModelPreferences),
   pullRequestMergeMethodOverrides: Schema.optionalKey(

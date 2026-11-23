@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 
 import { act, render } from "../../../test/render";
 import { ProviderAccentColorPicker } from "./ProviderAccentColorPicker";
-import { ThemeColorField } from "./ThemeColorPicker";
+import { ThemeColorField, ThemeColorPicker } from "./ThemeColorPicker";
 
 const HUE = "Accent color hue";
 const PLANE = "Accent color saturation and brightness";
@@ -113,6 +113,23 @@ describe("theme color field", () => {
 
     await userEvent.fill(byLabel("Accent color picker hex value"), "#ff0000");
     expect(onChange).toHaveBeenLastCalledWith("accent", "#ff000080");
+  });
+});
+
+describe("theme color picker", () => {
+  it("ends an open edit when the picker unmounts", async () => {
+    const onChange = vi.fn();
+    const onEditEnd = vi.fn();
+    await using screen = await renderPicker(
+      <ThemeColorPicker label="Top" value="#ff0000" onChange={onChange} onEditEnd={onEditEnd} />,
+    );
+    await userEvent.click(byLabel("Choose Top color"));
+    await vi.waitFor(() => byLabel("Top hue"));
+    await userEvent.fill(byLabel("Top picker hex value"), "#00ff00");
+
+    await screen.rerender(<></>);
+    expect(onChange).toHaveBeenLastCalledWith("#00ff00");
+    expect(onEditEnd).toHaveBeenCalledOnce();
   });
 });
 
