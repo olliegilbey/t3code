@@ -2713,3 +2713,11 @@ code {
 .messages-timeline-scroll:focus-visible {
   outline: none;
 }
+
+/* A barely visible I-beam while typing in the composer. Unlayered, so it beats cursor utilities. */
+[data-pointer-faded],
+[data-pointer-faded] * {
+  cursor:
+    url("./assets/pointer-faded.svg") 6 10,
+    text;
+}
