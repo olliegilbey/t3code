@@ -246,11 +246,12 @@ function ThemeColorPickerPanel({
   );
 }
 
-function ThemeColorPicker({
+export function ThemeColorPicker({
   label,
   value,
   onChange,
   onEditStart,
+  onEditEnd,
   onEditCancel,
   onInteract,
 }: {
@@ -258,6 +259,8 @@ function ThemeColorPicker({
   value: string;
   onChange: (value: string) => void;
   onEditStart?: () => void;
+  /** The popover closed without Escape, after its last change landed. */
+  onEditEnd?: () => void;
   onEditCancel?: () => void;
   onInteract?: () => void;
 }) {
@@ -279,6 +282,7 @@ function ThemeColorPicker({
         }
         committer.flush();
         if (cancelledRef.current) onEditCancel?.();
+        else onEditEnd?.();
       }}
     >
       <Tooltip>
