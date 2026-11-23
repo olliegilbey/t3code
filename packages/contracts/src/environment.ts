@@ -46,6 +46,14 @@ export const EnvironmentMachineKind = Schema.Literals(ENVIRONMENT_MACHINE_KINDS)
 export type EnvironmentMachineKind = typeof EnvironmentMachineKind.Type;
 export const isEnvironmentMachineKind = Schema.is(EnvironmentMachineKind);
 
+const EnvironmentGradientColor = Schema.String.check(Schema.isPattern(/^#[0-9a-fA-F]{6}$/));
+/** The conversation background of threads on this environment, top to bottom. */
+export const EnvironmentGradient = Schema.Struct({
+  top: EnvironmentGradientColor,
+  bottom: EnvironmentGradientColor,
+});
+export type EnvironmentGradient = typeof EnvironmentGradient.Type;
+
 export const ExecutionEnvironmentPlatform = Schema.Struct({
   os: ExecutionEnvironmentPlatformOs,
   arch: ExecutionEnvironmentPlatformArch,
@@ -171,6 +179,7 @@ export const ExecutionEnvironmentCapabilities = Schema.Struct({
   /** projects.listIgnoredFiles honors `query`. Older servers ignore it. */
   ignoredFileSearch: Schema.optionalKey(Schema.Boolean),
   environmentIcon: Schema.optionalKey(Schema.Boolean),
+  environmentGradient: Schema.optionalKey(Schema.Boolean),
   desktopAppUpdate: Schema.optionalKey(Schema.Boolean),
   /** The desktop app switches update tracks when a server update request names one. */
   desktopAppChannelSwitch: Schema.optionalKey(Schema.Boolean),

@@ -13048,5 +13048,14 @@
   "95435f0b59cb2193": "Ljudförhandsvisning",
   "4a12506938295127": "Ange {field} först.",
   "5807c08e225c6b3d": "Ladda ned",
-  "0d50b5bfe7151ece": "Det gick inte att ladda ned filen"
+  "0d50b5bfe7151ece": "Det gick inte att ladda ned filen",
+  "c6b8861640e15af4": "Tonar varje konversation efter miljön den körs i. Färgerna sparas i varje miljö, så alla enheter visar dem. Tills du väljer några får miljöerna blågrönt, sedan indigo och sedan temats färger.",
+  "bb7dff7020cd2a12": "Återställ miljögradienter",
+  "135acbea8689c1c7": "Miljögradienter",
+  "e8c24013ed827b79": "Anslut till den här miljön för att ändra dess gradient.",
+  "bc7dd11c0cee1ac1": "Uppdatera den här miljön för att ändra dess gradient.",
+  "a6e5e2a52de1f8e5": "{environment}: gradientens överkant",
+  "7eedb666e1fc6555": "{environment}: gradientens underkant",
+  "8e69601a0ac80bea": "Återställ gradienten för {environment}",
+  "4a11941db96fdb24": "bakgrund ton färg maskin fjärr server devbox lokal ssh identifiera"
 }

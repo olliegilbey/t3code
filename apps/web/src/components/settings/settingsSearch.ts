@@ -409,6 +409,14 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: [msg("latex tex katex equations formulas markdown")],
   },
   {
+    id: "environment-gradients",
+    title: msg("Environment gradients"),
+    to: "/settings/appearance",
+    searchTerms: [
+      msg("background tint color colour machine remote server devbox local ssh identify"),
+    ],
+  },
+  {
     id: "terminal-mode",
     title: msg("Terminal mode"),
     to: "/settings/appearance",

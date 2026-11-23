@@ -13041,5 +13041,14 @@
   "95435f0b59cb2193": "Prévia de áudio",
   "4a12506938295127": "Informe primeiro {field}.",
   "5807c08e225c6b3d": "Baixar",
-  "0d50b5bfe7151ece": "Não foi possível baixar o arquivo"
+  "0d50b5bfe7151ece": "Não foi possível baixar o arquivo",
+  "c6b8861640e15af4": "Colore cada conversa de acordo com o ambiente em que ela roda. As cores ficam salvas em cada ambiente, então todos os dispositivos as mostram. Até você escolher algumas, os ambientes recebem verde-azulado, depois índigo e depois as cores do seu tema.",
+  "bb7dff7020cd2a12": "Redefinir os degradês de ambiente",
+  "135acbea8689c1c7": "Degradês de ambiente",
+  "e8c24013ed827b79": "Conecte-se a este ambiente para mudar o degradê dele.",
+  "bc7dd11c0cee1ac1": "Atualize este ambiente para mudar o degradê dele.",
+  "a6e5e2a52de1f8e5": "{environment}: topo do degradê",
+  "7eedb666e1fc6555": "{environment}: base do degradê",
+  "8e69601a0ac80bea": "Redefinir o degradê de {environment}",
+  "4a11941db96fdb24": "fundo tom cor máquina remoto servidor devbox local ssh identificar"
 }

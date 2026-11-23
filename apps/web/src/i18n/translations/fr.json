@@ -13041,5 +13041,14 @@
   "95435f0b59cb2193": "Aperçu audio",
   "4a12506938295127": "Saisissez d’abord {field}.",
   "5807c08e225c6b3d": "Télécharger",
-  "0d50b5bfe7151ece": "Impossible de télécharger le fichier"
+  "0d50b5bfe7151ece": "Impossible de télécharger le fichier",
+  "c6b8861640e15af4": "Teinte chaque conversation selon l'environnement où elle s'exécute. Les couleurs sont enregistrées sur chaque environnement, donc tous les appareils les affichent. Tant que vous n'en choisissez pas, les environnements prennent le bleu canard, puis l'indigo, puis les couleurs de votre thème.",
+  "bb7dff7020cd2a12": "Réinitialiser les dégradés d'environnement",
+  "135acbea8689c1c7": "Dégradés d'environnement",
+  "e8c24013ed827b79": "Connectez-vous à cet environnement pour changer son dégradé.",
+  "bc7dd11c0cee1ac1": "Mettez à jour cet environnement pour changer son dégradé.",
+  "a6e5e2a52de1f8e5": "{environment} : haut du dégradé",
+  "7eedb666e1fc6555": "{environment} : bas du dégradé",
+  "8e69601a0ac80bea": "Réinitialiser le dégradé de {environment}",
+  "4a11941db96fdb24": "fond teinte couleur machine distant serveur devbox local ssh identifier"
 }

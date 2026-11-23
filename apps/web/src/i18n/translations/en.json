@@ -13049,5 +13049,14 @@
   "95435f0b59cb2193": "Audio preview",
   "4a12506938295127": "Enter the {field} first.",
   "5807c08e225c6b3d": "Download",
-  "0d50b5bfe7151ece": "Could not download file"
+  "0d50b5bfe7151ece": "Could not download file",
+  "c6b8861640e15af4": "Tint each conversation by the environment it runs on. Colors are saved on each environment, so every device shows them. Until you pick some, environments take teal, then indigo, then your theme's colors.",
+  "bb7dff7020cd2a12": "Reset environment gradients to default",
+  "135acbea8689c1c7": "Environment gradients",
+  "e8c24013ed827b79": "Connect to this environment to change its gradient.",
+  "bc7dd11c0cee1ac1": "Update this environment to change its gradient.",
+  "a6e5e2a52de1f8e5": "{environment} gradient top",
+  "7eedb666e1fc6555": "{environment} gradient bottom",
+  "8e69601a0ac80bea": "Reset {environment} gradient to default",
+  "4a11941db96fdb24": "background tint color colour machine remote server devbox local ssh identify"
 }

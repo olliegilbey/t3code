@@ -14,6 +14,18 @@ Customize T3 Code's theme, light/dark appearance, math rendering, motion, and cu
 
 Git-backed projects show branch and worktree controls below the composer before the first message. Turn on **Settings → Appearance → Composer context** (web and desktop) to keep those controls visible after the thread starts.
 
+## Environment gradients
+
+Turn on **Environment gradients** to tint each conversation by the environment it runs on, so a
+thread on a remote server looks different from one on this computer. Side-by-side chats each take
+their own environment's colors.
+
+Until you choose colors, environments take them in order: this computer gets teal, the next
+environment indigo, and later ones your theme's colors. That order belongs to each device. To make
+an environment look the same everywhere, pick its top and bottom colors. They are saved on that
+environment. The switch itself is saved separately on each device. This applies to the web and
+desktop clients.
+
 ## Math
 
 Turn on **Settings → Appearance → Render math** (per device) to render LaTeX in messages and Markdown previews on web, desktop, and mobile.
