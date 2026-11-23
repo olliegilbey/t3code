@@ -1983,9 +1983,9 @@ function markdownIslandOptions(state: ChatMarkdownComponentState): MarkdownIslan
         case "pre":
         case "details":
         case "table":
-          return true;
+        // Every quote needs its component for the copy button (CopyableBlockquote).
         case "blockquote":
-          return GITHUB_ALERT_PRESENTATIONS[String(node.properties.dataAlert ?? "")] !== undefined;
+          return true;
         case "div":
           return artifactTemplateFromHastProperties(node.properties) !== null;
         case "input":

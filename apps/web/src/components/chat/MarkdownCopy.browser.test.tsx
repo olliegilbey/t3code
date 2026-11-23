@@ -3,6 +3,7 @@ import { page, userEvent } from "vite-plus/test/browser";
 
 import "~/index.css";
 import { render } from "../../../test/render";
+import ChatMarkdown from "../ChatMarkdown";
 import { CopyableBlockquote } from "./CopyableBlockquote";
 import { InlineCodeCopyButton } from "./InlineCodeCopyButton";
 import { MarkdownCodeBlock } from "./MarkdownCodeBlock";
@@ -180,6 +181,27 @@ describe("quote copy", () => {
     const html = await (await item?.getType("text/html"))?.text();
     expect(html).toContain("<strong>Monday</strong>");
     expect(html).not.toContain("button");
+  });
+
+  it("gives a chat quote its button, and the copy keeps inline code backticks", async () => {
+    await using screen = await render(
+      <ChatMarkdown
+        cwd={undefined}
+        text={"> Verify on `fit` only.\n>\n> - Match on `distinct_id`."}
+      />,
+    );
+    const write = vi.fn<(items: ClipboardItem[]) => Promise<void>>().mockResolvedValue();
+    using _clipboard = vi.spyOn(navigator, "clipboard", "get").mockReturnValue({
+      write,
+      writeText: vi.fn(),
+    } as unknown as Clipboard);
+
+    await userEvent.click(screen.getByRole("button", { name: "Copy quote" }));
+    await expect.element(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
+    const item = write.mock.calls[0]?.[0][0];
+    expect(await (await item?.getType("text/plain"))?.text()).toBe(
+      "Verify on `fit` only.\n\n- Match on `distinct_id`.",
+    );
   });
 });
 
