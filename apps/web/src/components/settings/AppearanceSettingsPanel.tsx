@@ -40,6 +40,7 @@ import {
 } from "./settingsLayout";
 import { useSearchableSetting } from "./settingsSearch";
 import { AdvancedSettings } from "./AdvancedSettings";
+import { EnvironmentGradientSettings } from "./EnvironmentGradientSettings";
 import { PanelAnimationsPreview } from "./PanelAnimationsPreview";
 import { TypographySection } from "./TypographySettings";
 import { ThreadDetailsItemsRow } from "./ThreadDetailsItemsRow";
@@ -367,6 +368,7 @@ export function AppearanceSettingsPanel() {
             />
           }
         />
+        <EnvironmentGradientSettings />
         <TerminalModeRow />
         <VimKeysRow />
         <AdvancedSettings

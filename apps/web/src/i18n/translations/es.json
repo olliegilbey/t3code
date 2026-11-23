@@ -12781,5 +12781,14 @@
   "99d51127f573296b": "Otra cuenta",
   "8ec2c57414669b79": "Conecta un segundo espacio de trabajo o usuario de {tracker}.",
   "99963c0142e17f00": "Para la nueva cuenta de {tracker}.",
-  "6d8e4ebc889bace9": "Añadir cuenta"
+  "6d8e4ebc889bace9": "Añadir cuenta",
+  "c6b8861640e15af4": "Tiñe cada conversación según el entorno en el que se ejecuta. Los colores se guardan en cada entorno, así que todos los dispositivos los muestran. Hasta que elijas algunos, los entornos usan verde azulado, luego índigo y luego los colores de tu tema.",
+  "bb7dff7020cd2a12": "Restablecer los degradados de entorno",
+  "135acbea8689c1c7": "Degradados de entorno",
+  "e8c24013ed827b79": "Conéctate a este entorno para cambiar su degradado.",
+  "bc7dd11c0cee1ac1": "Actualiza este entorno para cambiar su degradado.",
+  "a6e5e2a52de1f8e5": "{environment}: parte superior del degradado",
+  "7eedb666e1fc6555": "{environment}: parte inferior del degradado",
+  "8e69601a0ac80bea": "Restablecer el degradado de {environment}",
+  "4a11941db96fdb24": "fondo tinte color máquina remoto servidor devbox local ssh identificar"
 }

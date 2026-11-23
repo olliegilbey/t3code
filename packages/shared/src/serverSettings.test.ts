@@ -91,6 +91,16 @@ describe("fallbackTextGenerationModelSelection", () => {
 });
 
 describe("serverSettings helpers", () => {
+  it("sets an environment gradient and clears it back to the client default", () => {
+    const gradient = { top: "#1e1834", bottom: "#000000" };
+    const set = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
+      environmentGradient: gradient,
+    });
+    expect(set.environmentGradient).toEqual(gradient);
+    const cleared = applyServerSettingsPatch(set, { environmentGradient: null });
+    expect(cleared.environmentGradient).toBeNull();
+  });
+
   it("translates a shipped client's idle compaction switch into a mode", () => {
     const off = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, { idleCompaction: "off" });
     expect([off.idleCompaction, off.compactIdleThreads]).toEqual(["off", false]);
