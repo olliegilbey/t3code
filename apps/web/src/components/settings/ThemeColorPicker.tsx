@@ -1,5 +1,5 @@
 import { msg, T, useGT, useMessages } from "gt-react";
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useEffectEvent, useRef, useState } from "react";
 import { m, type MessageResolver } from "../../i18n/messages";
 import { isThemeColor, themeColorToHex, type ThemeColorRole } from "../../themePalette";
 import { cn } from "../../lib/utils";
@@ -246,11 +246,12 @@ function ThemeColorPickerPanel({
   );
 }
 
-function ThemeColorPicker({
+export function ThemeColorPicker({
   label,
   value,
   onChange,
   onEditStart,
+  onEditEnd,
   onEditCancel,
   onInteract,
 }: {
@@ -258,6 +259,8 @@ function ThemeColorPicker({
   value: string;
   onChange: (value: string) => void;
   onEditStart?: () => void;
+  /** The popover closed without Escape, after its last change landed. */
+  onEditEnd?: () => void;
   onEditCancel?: () => void;
   onInteract?: () => void;
 }) {
@@ -266,19 +269,32 @@ function ThemeColorPicker({
   // Escape reverts the edit, so commits after it (the pending frame flushed on close, or a drag
   // still firing through the exit animation) are dropped instead of landing on the restored colors.
   const cancelledRef = useRef(false);
-  // Unmounting with the popover open (the editor closes mid-drag) never fires onOpenChange.
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- flushes the frame committer on unmount, since an open popover never fires onOpenChange
-  useEffect(() => committer.flush, [committer]);
+  const openRef = useRef(false);
+  const endOpenEdit = useEffectEvent(() => {
+    if (openRef.current && !cancelledRef.current) onEditEnd?.();
+  });
+  // Unmounting with the popover open (the editor closes mid-drag) never fires onOpenChange,
+  // so the edit lands and ends here instead.
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- an open popover never fires onOpenChange on unmount
+  useEffect(
+    () => () => {
+      committer.flush();
+      endOpenEdit();
+    },
+    [committer],
+  );
   return (
     <Popover
       onOpenChange={(open, eventDetails) => {
         cancelledRef.current = !open && eventDetails.reason === "escape-key";
+        openRef.current = open;
         if (open) {
           onEditStart?.();
           return;
         }
         committer.flush();
         if (cancelledRef.current) onEditCancel?.();
+        else onEditEnd?.();
       }}
     >
       <Tooltip>

@@ -12786,5 +12786,14 @@
   "99d51127f573296b": "Weiteres Konto",
   "8ec2c57414669b79": "Verbinde einen zweiten {tracker}-Workspace oder -Nutzer.",
   "99963c0142e17f00": "Für das neue {tracker}-Konto.",
-  "6d8e4ebc889bace9": "Konto hinzufügen"
+  "6d8e4ebc889bace9": "Konto hinzufügen",
+  "c6b8861640e15af4": "Tönt jede Unterhaltung nach der Umgebung, in der sie läuft. Die Farben werden in jeder Umgebung gespeichert, also zeigt jedes Gerät sie. Bis du welche wählst, bekommen Umgebungen Petrol, dann Indigo, dann die Farben deines Designs.",
+  "bb7dff7020cd2a12": "Umgebungsverläufe auf Standard zurücksetzen",
+  "135acbea8689c1c7": "Umgebungsverläufe",
+  "e8c24013ed827b79": "Verbinde dich mit dieser Umgebung, um ihren Verlauf zu ändern.",
+  "bc7dd11c0cee1ac1": "Aktualisiere diese Umgebung, um ihren Verlauf zu ändern.",
+  "a6e5e2a52de1f8e5": "{environment}: Verlauf oben",
+  "7eedb666e1fc6555": "{environment}: Verlauf unten",
+  "8e69601a0ac80bea": "Verlauf von {environment} auf Standard zurücksetzen",
+  "4a11941db96fdb24": "hintergrund tönung farbe rechner remote server devbox lokal ssh erkennen"
 }

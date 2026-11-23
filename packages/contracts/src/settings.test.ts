@@ -416,6 +416,14 @@ describe("ServerSettings.sourceControlWritingStyle", () => {
   });
 });
 
+describe("ServerSettings environment gradient", () => {
+  it("decodes a malformed gradient as null and omits null on the wire", () => {
+    const settings = decodeServerSettings({ environmentGradient: { top: "teal", bottom: "#000" } });
+    expect(settings.environmentGradient).toBeNull();
+    expect(encodeServerSettings(settings)).not.toHaveProperty("environmentGradient");
+  });
+});
+
 describe("ServerSettings environment icon", () => {
   it("decodes a kind from a newer server as null instead of failing the snapshot", () => {
     expect(decodeServerSettings({ environmentIcon: "toaster" }).environmentIcon).toBeNull();

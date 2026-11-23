@@ -21,6 +21,7 @@ import {
 } from "./ChatView.logic";
 import { usePullRequestDraftThread } from "./chat/usePullRequestDraftThread";
 import { usePullRequestLinking } from "../hooks/usePullRequestLinking";
+import { useEnvironmentGradientSurface } from "../hooks/useEnvironmentGradient";
 import { useComposerSelection } from "./chat/useComposerSelection";
 import { useComposerFocus } from "./chat/useComposerFocus";
 import { useProjectCloneBanner } from "./chat/useProjectCloneBanner";
@@ -776,6 +777,7 @@ export default function ChatView(props: ChatViewProps) {
   ] = useState<Record<string, boolean>>({});
   const legendListRef = useRef<LegendListRef | null>(null);
   const conversationArea = workspaceAreaProps("conversation", 1, gt("Conversation"));
+  const environmentGradient = useEnvironmentGradientSurface(environmentId);
   const [composerOverlayElement, setComposerOverlayElement] = useState<HTMLDivElement | null>(null);
   const [composerTimelineInset, setComposerTimelineInset] = useState(0);
   const composerTimelineInsetRef = useRef(0);
@@ -3524,9 +3526,11 @@ export default function ChatView(props: ChatViewProps) {
       )}
       {rightPanelControlsAtRoot && !embedded ? panelLayoutControls : null}
       <div
+        {...environmentGradient}
         className={cn(
           "flex min-h-0 min-w-0 flex-col overflow-x-hidden",
           rightPanelMaximized ? "w-0 flex-none" : "flex-1",
+          environmentGradient && "bg-(image:--environment-gradient)",
         )}
         data-chat-column-maximized-away={rightPanelMaximized ? "true" : "false"}
         data-chat-column
@@ -3538,7 +3542,7 @@ export default function ChatView(props: ChatViewProps) {
             ref={threadPanelPopoverAnchorRef}
             data-chat-header
             className={cn(
-              "relative bg-background [[data-panel-animations=true]_&]:motion-safe:transition-[padding-left] [[data-panel-animations=true]_&]:motion-safe:duration-(--panel-animation-duration) [[data-panel-animations=true]_&]:motion-safe:ease-out",
+              "relative [[data-panel-animations=true]_&]:motion-safe:transition-[padding-left] [[data-panel-animations=true]_&]:motion-safe:duration-(--panel-animation-duration) [[data-panel-animations=true]_&]:motion-safe:ease-out",
               isElectron
                 ? cn(
                     "drag-region flex h-[var(--workspace-topbar-height)] min-h-[var(--workspace-topbar-height)] shrink-0 items-center px-3 sm:px-5",
@@ -3548,6 +3552,7 @@ export default function ChatView(props: ChatViewProps) {
                   )
                 : "flex h-[var(--workspace-topbar-height)] min-h-[var(--workspace-topbar-height)] shrink-0 items-center pl-(--workspace-gutter-start) pr-(--workspace-gutter-end)",
               COLLAPSED_SIDEBAR_TITLEBAR_INSET_CLASS,
+              !environmentGradient && "bg-background",
             )}
           >
             {isElectron && rightPanelControlsAtRoot ? (
@@ -3617,7 +3622,10 @@ export default function ChatView(props: ChatViewProps) {
             />
             <div
               {...conversationArea}
-              className="relative flex min-h-0 flex-1 flex-col bg-background"
+              className={cn(
+                "relative flex min-h-0 flex-1 flex-col",
+                !environmentGradient && "bg-background",
+              )}
             >
               <WorkspaceMutationIdContext value={workspaceMutationId}>
                 <ThreadTimeline
