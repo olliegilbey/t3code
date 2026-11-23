@@ -2683,3 +2683,12 @@ code {
 .messages-timeline-scroll:focus-visible {
   outline: none;
 }
+
+/* A barely visible I-beam while typing in the composer. Unlayered, so it beats cursor utilities. */
+[data-pointer-faded],
+[data-pointer-faded] * {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='20'%3E%3Cg opacity='.2' fill='none' stroke-linecap='round'%3E%3Cpath d='M3 2h6M3 18h6M6 2v16' stroke='%23fff' stroke-width='3'/%3E%3Cpath d='M3 2h6M3 18h6M6 2v16' stroke='%23000'/%3E%3C/g%3E%3C/svg%3E")
+      6 10,
+    text;
+}

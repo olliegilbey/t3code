@@ -310,6 +310,7 @@ import { promptSuggestionToAccept, usePromptSuggestion } from "./usePromptSugges
 import { useFreshSessionArmed } from "./freshSessionArms";
 import { TerminalApprovalPrompt } from "./TerminalApprovalPrompt";
 import { useTerminalApprovalPrompt } from "./useTerminalApprovalPrompt";
+import { fadePointerWhileTyping } from "./fadePointerWhileTyping";
 
 function consumePasteAsTextShortcut(deadline: { current: number }): boolean {
   const armed = Date.now() <= deadline.current;
@@ -3800,6 +3801,9 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
           <div
             ref={composerSurfaceRef}
             data-chat-composer-surface="true"
+            onKeyDownCapture={(event) =>
+              fadePointerWhileTyping(event.currentTarget, event.nativeEvent)
+            }
             data-chat-composer-mobile-collapsed={isComposerCollapsedMobile ? "true" : "false"}
             className={cn(
               "rounded-2xl transition-[background-color] duration-200",
