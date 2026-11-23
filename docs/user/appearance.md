@@ -29,6 +29,18 @@ The controls retreat as the composer docks after you send the first message.
 Turn on **Composer context** to keep those controls visible after the thread starts. This preference
 applies to the web and desktop clients.
 
+## Environment gradients
+
+Turn on **Environment gradients** to tint each conversation by the environment it runs on, so a
+thread on a remote server looks different from one on this computer. Side-by-side chats each take
+their own environment's colors.
+
+Until you choose colors, environments take them in order: this computer gets teal, the next
+environment indigo, and later ones your theme's colors. That order belongs to each device. To make
+an environment look the same everywhere, pick its top and bottom colors. They are saved on that
+environment. The switch itself is saved separately on each device. This applies to the web and
+desktop clients.
+
 ## Math
 
 Turn on **Render math** in **Settings → Appearance** to typeset LaTeX in messages and Markdown

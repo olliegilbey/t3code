@@ -12975,5 +12975,14 @@
   "201490988858b511": "retirada por {by}",
   "99451a5d2d40440f": "Retirada por {by}.",
   "3ee30a50b70fffab": "Retirada por {by}: {reason}",
-  "92e129bf413a1220": "retirada"
+  "92e129bf413a1220": "retirada",
+  "c6b8861640e15af4": "Tiñe cada conversación según el entorno en el que se ejecuta. Los colores se guardan en cada entorno, así que todos los dispositivos los muestran. Hasta que elijas algunos, los entornos usan verde azulado, luego índigo y luego los colores de tu tema.",
+  "bb7dff7020cd2a12": "Restablecer los degradados de entorno",
+  "135acbea8689c1c7": "Degradados de entorno",
+  "e8c24013ed827b79": "Conéctate a este entorno para cambiar su degradado.",
+  "bc7dd11c0cee1ac1": "Actualiza este entorno para cambiar su degradado.",
+  "a6e5e2a52de1f8e5": "{environment}: parte superior del degradado",
+  "7eedb666e1fc6555": "{environment}: parte inferior del degradado",
+  "8e69601a0ac80bea": "Restablecer el degradado de {environment}",
+  "4a11941db96fdb24": "fondo tinte color máquina remoto servidor devbox local ssh identificar"
 }

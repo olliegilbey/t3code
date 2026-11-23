@@ -1,0 +1,44 @@
+/* Environment gradients (Settings → Appearance). An element with data-environment-gradient
+   resolves its environment's colors into --environment-gradient; whatever paints it uses
+   `bg-(image:--environment-gradient)`. See environmentGradient.ts for how a kind is chosen.
+
+   Registered as colors so their computed values are resolved, which the settings pickers read
+   to start from the color on screen. */
+@property --environment-gradient-top {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --environment-gradient-bottom {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+[data-environment-gradient] {
+  --environment-gradient: linear-gradient(
+    to bottom,
+    var(--environment-gradient-top),
+    var(--environment-gradient-bottom)
+  );
+}
+
+/* Defaults fade to black on a dark appearance. The presets keep their exact colors there, and a
+   theme color takes the presets' darkness (OKLCH lightness 0.23-0.25) and at most their chroma. On
+   a light appearance both become a pale wash fading to white, so text keeps its contrast. */
+[data-environment-gradient="preset"],
+[data-environment-gradient="theme"] {
+  --environment-gradient-top: oklch(from var(--environment-gradient-source) 0.95 min(c, 0.03) h);
+  --environment-gradient-bottom: #fff;
+}
+
+.dark [data-environment-gradient="preset"] {
+  --environment-gradient-top: var(--environment-gradient-source);
+  --environment-gradient-bottom: #000;
+}
+
+.dark [data-environment-gradient="theme"] {
+  --environment-gradient-top: oklch(from var(--environment-gradient-source) 0.24 min(c, 0.05) h);
+  --environment-gradient-bottom: #000;
+}
