@@ -95,7 +95,9 @@ saved connections live in `~/.t3/userdata`, which both apps read.
   notification says when it is ready.
 - `mac/t3-swap.sh`, installed as `t3-swap`, quits the fork's app, swaps the staged build in, and
   reopens it. That restarts the Mac's local server too. `t3-swap --rollback` puts the previous
-  build back. The official app is never touched.
+  build back, and `t3-swap --restart` only restarts it. It opens the app with the bare environment
+  the Dock gives, not the terminal's, so a project's mise `GH_TOKEN` never reaches the server. The
+  official app is never touched.
 
 The certificate gives every build the same identity, so keychain access and macOS permissions
 granted once stay granted. Logs are in `~/Library/Logs/t3-fork`.
