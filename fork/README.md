@@ -10,7 +10,8 @@ Nightly icon and branding. The `9` keeps the build number clear of official ones
 
 ## Updating
 
-A build reaches each machine separately. Either can stay on an older build until you update it.
+A build reaches each machine separately. The devbox can run ahead of the Mac, but the Mac cannot
+run ahead of the devbox.
 
 - **Devbox server.** `deploy.sh` moves it onto the new build once no turn is running there. Nothing
   to do by hand.
@@ -18,7 +19,10 @@ A build reaches each machine separately. Either can stay on an older build until
   Quitting the app stops its local server and any turn running on it, so swap when the Mac's own
   threads are idle.
 - **Version match.** The Mac app needs its own version on the devbox. The devbox keeps the last
-  three builds, so the Mac can be up to two builds behind.
+  three builds, so the Mac can be up to two builds behind. It cannot be ahead: the app runs its own
+  version's `t3` there, and a build with new database migrations then refuses the database the
+  older server owns (`ServerOwnsDatabaseError`). So `t3-swap` refuses a build newer than the
+  devbox serves. Swap once `deploy.sh` has moved the devbox.
 
 ## The stack
 
@@ -96,8 +100,9 @@ saved connections live in `~/.t3/userdata`, which both apps read.
 - `mac/t3-swap.sh`, installed as `t3-swap`, quits the fork's app, swaps the staged build in, and
   reopens it. That restarts the Mac's local server too. `t3-swap --rollback` puts the previous
   build back, and `t3-swap --restart` only restarts it. It opens the app with the bare environment
-  the Dock gives, not the terminal's, so a project's mise `GH_TOKEN` never reaches the server. The
-  official app is never touched.
+  the Dock gives, not the terminal's, so a project's mise `GH_TOKEN` never reaches the server. It
+  reads the devbox's version from `https://ollie-xps.fynbos-mountain.ts.net:8443` and refuses a
+  build newer than that; `t3-swap --force` swaps anyway. The official app is never touched.
 
 The certificate gives every build the same identity, so keychain access and macOS permissions
 granted once stay granted. Logs are in `~/Library/Logs/t3-fork`.
