@@ -63,6 +63,9 @@ build() {
   git -C "$BUILD" checkout --quiet --force --detach "fork-build/$version"
   git -C "$BUILD" clean -fdxq -e node_modules -e /native/resource-monitor/target
   cd "$BUILD"
+  # Release builds get T3 Connect's public IDs from CI. Here they come from .env.example, after
+  # the clean above removes any .env. Without them the build ships with T3 Connect off.
+  cp .env.example .env
 
   local node_version
   node_version=$(node -p 'require("./package.json").engines.node')

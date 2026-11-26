@@ -20,6 +20,9 @@ main() {
   git -C "$build" checkout --quiet --force --detach FETCH_HEAD
   git -C "$build" clean -fdxq -e node_modules -e /native/resource-monitor/target
   cd "$build"
+  # Release builds get T3 Connect's public IDs from CI. Here they come from .env.example, after
+  # the clean above removes any .env. Without them the build ships with T3 Connect off.
+  cp .env.example .env
 
   # Every Node step uses the exact engines.node, which the executable embeds.
   local node_version
